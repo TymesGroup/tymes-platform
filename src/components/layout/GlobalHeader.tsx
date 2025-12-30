@@ -1,3 +1,8 @@
+/**
+ * GlobalHeader Component - Apple-inspired Design
+ * Header com carrinho, favoritos e pedidos no estilo Apple
+ */
+
 import React, { useState } from 'react';
 import {
   ShoppingCart,
@@ -13,13 +18,6 @@ import {
 import { useCart } from '../../lib/CartContext';
 import { useFavorites } from '../../lib/FavoritesContext';
 import { useAuth } from '../../lib/AuthContext';
-
-/**
- * GlobalHeader Component
- *
- * A refined header with cart, favorites, and orders buttons.
- * Clean, minimal design with subtle interactions.
- */
 
 interface GlobalHeaderProps {
   onNavigateToCheckout: () => void;
@@ -38,103 +36,88 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
   const [showCartPanel, setShowCartPanel] = useState(false);
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(price);
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price);
   };
 
   if (!user) return null;
 
   return (
     <>
-      {/* Header Buttons */}
-      <div className="hidden md:flex fixed top-0 right-0 z-40 items-center gap-1 p-2 bg-white dark:bg-zinc-900 rounded-bl-xl border-l border-b border-zinc-200 dark:border-zinc-800">
-        {/* Favorites */}
+      <div className="hidden md:flex fixed top-0 right-0 z-40 items-center gap-1 p-2 bg-[#f5f5f7]/80 dark:bg-[#1d1d1f]/80 backdrop-blur-xl rounded-bl-2xl border-l border-b border-[#d2d2d7] dark:border-[#424245]">
         <button
           onClick={onNavigateToFavorites}
-          className="relative p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-          aria-label="Favorites"
+          className="relative p-2.5 rounded-xl hover:bg-white dark:hover:bg-[#2d2d2d] transition-colors"
         >
-          <Heart size={18} className="text-zinc-600 dark:text-zinc-400" />
+          <Heart size={18} className="text-[#1d1d1f] dark:text-[#f5f5f7]" />
           {favorites.length > 0 && (
             <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] font-medium rounded-full flex items-center justify-center">
               {favorites.length > 99 ? '99' : favorites.length}
             </span>
           )}
         </button>
-
-        {/* Orders */}
         <button
           onClick={onNavigateToOrders}
-          className="relative p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-          aria-label="Orders"
+          className="relative p-2.5 rounded-xl hover:bg-white dark:hover:bg-[#2d2d2d] transition-colors"
         >
-          <Package size={18} className="text-zinc-600 dark:text-zinc-400" />
+          <Package size={18} className="text-[#1d1d1f] dark:text-[#f5f5f7]" />
         </button>
-
-        {/* Cart */}
         <button
           onClick={() => setShowCartPanel(true)}
-          className="relative p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-          aria-label="Cart"
+          className="relative p-2.5 rounded-xl hover:bg-white dark:hover:bg-[#2d2d2d] transition-colors"
         >
-          <ShoppingCart size={18} className="text-zinc-600 dark:text-zinc-400" />
+          <ShoppingCart size={18} className="text-[#1d1d1f] dark:text-[#f5f5f7]" />
           {totalItems > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-accent-600 text-white text-[10px] font-medium rounded-full flex items-center justify-center">
+            <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-[#0066cc] text-white text-[10px] font-medium rounded-full flex items-center justify-center">
               {totalItems > 99 ? '99' : totalItems}
             </span>
           )}
         </button>
       </div>
 
-      {/* Cart Side Panel */}
       {showCartPanel && (
         <>
-          {/* Backdrop */}
           <div
             className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
             onClick={() => setShowCartPanel(false)}
           />
-
-          {/* Panel */}
-          <div className="fixed top-0 right-0 h-full w-full sm:w-96 bg-white dark:bg-zinc-900 z-50 shadow-xl flex flex-col border-l border-zinc-200 dark:border-zinc-800">
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-zinc-100 dark:border-zinc-800">
+          <div className="fixed top-0 right-0 h-full w-full sm:w-[400px] bg-white dark:bg-[#1d1d1f] z-50 shadow-2xl flex flex-col">
+            <div className="flex items-center justify-between p-5 border-b border-[#d2d2d7] dark:border-[#424245]">
               <div className="flex items-center gap-3">
-                <ShoppingCart size={20} className="text-zinc-900 dark:text-zinc-100" />
+                <div className="w-10 h-10 rounded-xl bg-[#f5f5f7] dark:bg-[#2d2d2d] flex items-center justify-center">
+                  <ShoppingCart size={20} className="text-[#1d1d1f] dark:text-[#f5f5f7]" />
+                </div>
                 <div>
-                  <h2 className="font-semibold text-zinc-900 dark:text-zinc-100">Cart</h2>
-                  <p className="text-xs text-zinc-500">
-                    {totalItems} {totalItems === 1 ? 'item' : 'items'}
+                  <h2 className="text-[17px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                    Carrinho
+                  </h2>
+                  <p className="text-[12px] text-[#86868b]">
+                    {totalItems} {totalItems === 1 ? 'item' : 'itens'}
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setShowCartPanel(false)}
-                className="p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                aria-label="Close cart"
+                className="p-2 rounded-full hover:bg-[#f5f5f7] dark:hover:bg-[#2d2d2d] transition-colors"
               >
-                <X size={18} className="text-zinc-500" />
+                <X size={20} className="text-[#86868b]" />
               </button>
             </div>
 
-            {/* Items */}
             <div className="flex-1 overflow-y-auto">
               {items.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full p-6 text-center">
-                  <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center mb-4">
-                    <ShoppingCart size={24} className="text-zinc-400" />
+                  <div className="w-16 h-16 rounded-2xl bg-[#f5f5f7] dark:bg-[#2d2d2d] flex items-center justify-center mb-4">
+                    <ShoppingCart size={28} className="text-[#86868b]" />
                   </div>
-                  <h3 className="font-medium text-zinc-900 dark:text-zinc-100 mb-1">
-                    Cart is empty
+                  <h3 className="text-[17px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] mb-1">
+                    Carrinho vazio
                   </h3>
-                  <p className="text-sm text-zinc-500 mb-4">Add products to start shopping</p>
+                  <p className="text-[14px] text-[#86868b] mb-6">Adicione produtos para começar</p>
                   <button
                     onClick={() => setShowCartPanel(false)}
-                    className="px-4 py-2 bg-accent-600 text-white rounded-lg text-sm font-medium hover:bg-accent-700 transition-colors"
+                    className="px-6 py-2.5 bg-[#0066cc] text-white rounded-full text-[14px] hover:bg-[#0055b3] transition-colors"
                   >
-                    Continue Shopping
+                    Continuar comprando
                   </button>
                 </div>
               ) : (
@@ -142,10 +125,9 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
                   {items.map(item => (
                     <div
                       key={item.id}
-                      className="flex gap-3 p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg border border-zinc-100 dark:border-zinc-800"
+                      className="flex gap-4 p-4 bg-[#f5f5f7] dark:bg-[#2d2d2d] rounded-2xl"
                     >
-                      {/* Image */}
-                      <div className="w-16 h-16 rounded-md bg-zinc-200 dark:bg-zinc-700 overflow-hidden flex-shrink-0">
+                      <div className="w-16 h-16 rounded-xl bg-white dark:bg-[#1d1d1f] overflow-hidden flex-shrink-0">
                         {item.product?.image ? (
                           <img
                             src={item.product.image}
@@ -154,106 +136,95 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
-                            <Package size={20} className="text-zinc-400" />
+                            <Package size={20} className="text-[#86868b]" />
                           </div>
                         )}
                       </div>
-
-                      {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-sm text-zinc-900 dark:text-zinc-100 truncate">
-                          {item.product?.name || 'Product'}
+                        <h4 className="text-[14px] font-medium text-[#1d1d1f] dark:text-[#f5f5f7] truncate">
+                          {item.product?.name || 'Produto'}
                         </h4>
-                        <p className="font-semibold text-accent-600 text-sm mt-0.5">
+                        <p className="text-[15px] font-semibold text-[#0066cc] mt-0.5">
                           {formatPrice(item.product?.price || 0)}
                         </p>
-
-                        {/* Quantity */}
-                        <div className="flex items-center justify-between mt-2">
-                          <div className="flex items-center gap-0.5 bg-white dark:bg-zinc-900 rounded-md border border-zinc-200 dark:border-zinc-700">
+                        <div className="flex items-center justify-between mt-3">
+                          <div className="flex items-center bg-white dark:bg-[#1d1d1f] rounded-lg border border-[#d2d2d7] dark:border-[#424245]">
                             <button
                               onClick={() =>
                                 updateQuantity(item.id, Math.max(1, (item.quantity || 1) - 1))
                               }
-                              className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-l-md transition-colors"
-                              aria-label="Decrease quantity"
+                              className="p-1.5 hover:bg-[#f5f5f7] dark:hover:bg-[#2d2d2d] rounded-l-lg transition-colors"
                             >
-                              <Minus size={12} />
+                              <Minus size={14} className="text-[#86868b]" />
                             </button>
-                            <span className="w-6 text-center text-xs font-medium">
+                            <span className="w-8 text-center text-[13px] font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">
                               {item.quantity || 1}
                             </span>
                             <button
                               onClick={() => updateQuantity(item.id, (item.quantity || 1) + 1)}
-                              className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-r-md transition-colors"
-                              aria-label="Increase quantity"
+                              className="p-1.5 hover:bg-[#f5f5f7] dark:hover:bg-[#2d2d2d] rounded-r-lg transition-colors"
                             >
-                              <Plus size={12} />
+                              <Plus size={14} className="text-[#86868b]" />
                             </button>
                           </div>
                           <button
                             onClick={() => removeItem(item.id)}
-                            className="p-1 text-zinc-400 hover:text-red-500 transition-colors"
-                            aria-label="Remove item"
+                            className="p-1.5 text-[#86868b] hover:text-red-500 transition-colors"
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={16} />
                           </button>
                         </div>
                       </div>
                     </div>
                   ))}
-
                   <button
                     onClick={clearCart}
-                    className="w-full text-xs text-zinc-500 hover:text-red-500 py-2 transition-colors"
+                    className="w-full text-[13px] text-[#86868b] hover:text-red-500 py-2 transition-colors"
                   >
-                    Clear cart
+                    Limpar carrinho
                   </button>
                 </div>
               )}
             </div>
 
-            {/* Footer */}
             {items.length > 0 && (
-              <div className="border-t border-zinc-100 dark:border-zinc-800 p-4 bg-zinc-50 dark:bg-zinc-800/30">
-                {/* Summary */}
-                <div className="space-y-1.5 mb-4">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-zinc-500">Subtotal</span>
-                    <span className="font-medium text-zinc-900 dark:text-zinc-100">
+              <div className="border-t border-[#d2d2d7] dark:border-[#424245] p-5 bg-[#f5f5f7] dark:bg-[#2d2d2d]">
+                <div className="space-y-2 mb-5">
+                  <div className="flex justify-between text-[14px]">
+                    <span className="text-[#86868b]">Subtotal</span>
+                    <span className="font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">
                       {formatPrice(totalAmount)}
                     </span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-zinc-500">Shipping</span>
-                    <span className="text-emerald-600 font-medium">Free</span>
+                  <div className="flex justify-between text-[14px]">
+                    <span className="text-[#86868b]">Frete</span>
+                    <span className="text-green-600 font-medium">Grátis</span>
                   </div>
-                  <div className="flex justify-between pt-2 border-t border-zinc-200 dark:border-zinc-700">
-                    <span className="font-medium text-zinc-900 dark:text-zinc-100">Total</span>
-                    <span className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                  <div className="flex justify-between pt-3 border-t border-[#d2d2d7] dark:border-[#424245]">
+                    <span className="text-[15px] font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">
+                      Total
+                    </span>
+                    <span className="text-[20px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
                       {formatPrice(totalAmount)}
                     </span>
                   </div>
                 </div>
-
-                {/* Checkout */}
                 <button
                   onClick={() => {
                     setShowCartPanel(false);
                     onNavigateToCheckout();
                   }}
-                  className="w-full py-2.5 bg-accent-600 text-white font-medium rounded-lg hover:bg-accent-700 transition-colors flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-[#0066cc] text-white rounded-full hover:bg-[#0055b3] transition-colors flex items-center justify-center gap-2"
                 >
                   <CreditCard size={18} />
-                  Checkout
+                  Finalizar compra
                 </button>
-
                 <button
                   onClick={() => setShowCartPanel(false)}
-                  className="w-full mt-2 py-2 text-zinc-600 dark:text-zinc-400 text-sm hover:text-accent-600 transition-colors flex items-center justify-center gap-1.5"
+                  className="w-full mt-3 py-2.5 text-[#0066cc] text-[14px] hover:underline flex items-center justify-center gap-1.5"
                 >
                   <ArrowLeft size={14} />
-                  Continue Shopping
+                  Continuar comprando
                 </button>
               </div>
             )}

@@ -1,14 +1,12 @@
+/**
+ * MobileBottomNav Component - Apple-inspired Design
+ * Navegação mobile com design minimalista estilo Apple
+ */
+
 import React from 'react';
 import { LayoutDashboard, Compass, Bot, UserCog } from 'lucide-react';
 import { ModuleType, ProfileType } from '../../types';
 import { MODULE_MENUS } from '../../constants/navigation';
-
-/**
- * MobileBottomNav Component
- *
- * A refined mobile navigation with max 5 items,
- * 44px touch targets, and clean minimal design.
- */
 
 interface MobileBottomNavProps {
   activeProfile: ProfileType;
@@ -21,25 +19,25 @@ interface MobileBottomNavProps {
 const ROOT_MOBILE_ITEMS = [
   {
     id: ModuleType.DASHBOARD,
-    label: 'Home',
+    label: 'Início',
     icon: LayoutDashboard,
     allowedProfiles: [ProfileType.PERSONAL, ProfileType.BUSINESS],
   },
   {
     id: ModuleType.EXPLORE,
-    label: 'Explore',
+    label: 'Explorar',
     icon: Compass,
     allowedProfiles: [ProfileType.PERSONAL, ProfileType.BUSINESS],
   },
   {
     id: ModuleType.AI_AGENT,
-    label: 'AI',
+    label: 'IA',
     icon: Bot,
     allowedProfiles: [ProfileType.PERSONAL, ProfileType.BUSINESS],
   },
   {
     id: ModuleType.PROFILE,
-    label: 'Profile',
+    label: 'Perfil',
     icon: UserCog,
     allowedProfiles: [ProfileType.PERSONAL, ProfileType.BUSINESS],
   },
@@ -74,8 +72,8 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
     const adminItems = superAdminMenu?.items.slice(0, 5) || [];
 
     return (
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 safe-area-bottom">
-        <div className="flex items-center justify-around px-1 h-16">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#f5f5f7]/80 dark:bg-[#1d1d1f]/80 backdrop-blur-xl backdrop-saturate-150 border-t border-[#d2d2d7] dark:border-[#424245] safe-area-bottom">
+        <div className="flex items-center justify-around px-2 h-16">
           {adminItems.map(item => {
             const isActive = activePage === item.id;
             const Icon = item.icon;
@@ -84,11 +82,11 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
               <button
                 key={item.id}
                 onClick={() => onPageChange(item.id)}
-                className={`flex flex-col items-center justify-center min-w-[56px] min-h-[44px] py-1.5 px-2 rounded-lg transition-colors ${
-                  isActive ? 'text-red-600 dark:text-red-400' : 'text-zinc-500 dark:text-zinc-400'
+                className={`flex flex-col items-center justify-center min-w-[56px] min-h-[44px] py-1.5 px-2 rounded-xl transition-colors ${
+                  isActive ? 'text-red-600 dark:text-red-400' : 'text-[#86868b]'
                 }`}
               >
-                <Icon size={20} strokeWidth={isActive ? 2 : 1.5} />
+                <Icon size={22} strokeWidth={isActive ? 2 : 1.5} />
                 <span className={`text-[10px] mt-0.5 ${isActive ? 'font-medium' : ''}`}>
                   {item.label}
                 </span>
@@ -107,8 +105,8 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       .slice(0, 5);
 
     return (
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 safe-area-bottom">
-        <div className="flex items-center justify-around px-1 h-16">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#f5f5f7]/80 dark:bg-[#1d1d1f]/80 backdrop-blur-xl backdrop-saturate-150 border-t border-[#d2d2d7] dark:border-[#424245] safe-area-bottom">
+        <div className="flex items-center justify-around px-2 h-16">
           {moduleItems.map(item => {
             const isActive = activePage === item.id;
             const Icon = item.icon;
@@ -117,13 +115,11 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
               <button
                 key={item.id}
                 onClick={() => onPageChange(item.id)}
-                className={`flex flex-col items-center justify-center min-w-[56px] min-h-[44px] py-1.5 px-2 rounded-lg transition-colors ${
-                  isActive
-                    ? 'text-accent-600 dark:text-accent-400'
-                    : 'text-zinc-500 dark:text-zinc-400'
+                className={`flex flex-col items-center justify-center min-w-[56px] min-h-[44px] py-1.5 px-2 rounded-xl transition-colors ${
+                  isActive ? 'text-[#0066cc]' : 'text-[#86868b]'
                 }`}
               >
-                <Icon size={20} strokeWidth={isActive ? 2 : 1.5} />
+                <Icon size={22} strokeWidth={isActive ? 2 : 1.5} />
                 <span
                   className={`text-[10px] mt-0.5 truncate max-w-[52px] ${isActive ? 'font-medium' : ''}`}
                 >
@@ -139,8 +135,8 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
 
   // Root Navigation
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 safe-area-bottom">
-      <div className="flex items-center justify-around px-1 h-16">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#f5f5f7]/80 dark:bg-[#1d1d1f]/80 backdrop-blur-xl backdrop-saturate-150 border-t border-[#d2d2d7] dark:border-[#424245] safe-area-bottom">
+      <div className="flex items-center justify-around px-2 h-16">
         {filteredRootItems.map(item => {
           const isActive = activeModule === item.id;
           const Icon = item.icon;
@@ -149,13 +145,11 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             <button
               key={item.id}
               onClick={() => onNavigate(item.id)}
-              className={`flex flex-col items-center justify-center min-w-[56px] min-h-[44px] py-1.5 px-2 rounded-lg transition-colors ${
-                isActive
-                  ? 'text-accent-600 dark:text-accent-400'
-                  : 'text-zinc-500 dark:text-zinc-400'
+              className={`flex flex-col items-center justify-center min-w-[56px] min-h-[44px] py-1.5 px-2 rounded-xl transition-colors ${
+                isActive ? 'text-[#0066cc]' : 'text-[#86868b]'
               }`}
             >
-              <Icon size={20} strokeWidth={isActive ? 2 : 1.5} />
+              <Icon size={22} strokeWidth={isActive ? 2 : 1.5} />
               <span className={`text-[10px] mt-0.5 ${isActive ? 'font-medium' : ''}`}>
                 {item.label}
               </span>

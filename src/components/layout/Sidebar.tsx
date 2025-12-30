@@ -1,3 +1,8 @@
+/**
+ * Sidebar Component - Apple-inspired Design
+ * Navegação lateral com design minimalista estilo Apple
+ */
+
 import React, { useState } from 'react';
 import {
   LogOut,
@@ -69,6 +74,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       ModuleType.SETTINGS,
       ModuleType.PROFILE,
     ].includes(activeModule as ModuleType);
+
   const navItemsToRender = isRootModule
     ? ROOT_NAV_ITEMS.filter(item => item.allowedProfiles.includes(activeProfile))
     : [];
@@ -82,12 +88,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
         return 'Admin';
       case ProfileType.BUSINESS:
       case 'BUSINESS':
-        return 'Business';
+        return 'Negócios';
       case ProfileType.PERSONAL:
       case 'PERSONAL':
-        return 'Personal';
+        return 'Pessoal';
       default:
-        return 'Personal';
+        return 'Pessoal';
     }
   };
 
@@ -99,9 +105,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       const { error } = await addAccount(email, password);
       if (error) {
         setError(
-          error.message === 'Invalid login credentials'
-            ? 'Invalid email or password'
-            : error.message
+          error.message === 'Invalid login credentials' ? 'Email ou senha inválidos' : error.message
         );
       } else {
         setShowAccountModal(false);
@@ -109,7 +113,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         setPassword('');
       }
     } catch {
-      setError('Error adding account');
+      setError('Erro ao adicionar conta');
     }
     setLoading(false);
   };
@@ -125,25 +129,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <>
       <aside
-        className={`hidden md:flex flex-col ${collapsed ? 'w-16' : 'w-60'} border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 transition-all duration-200`}
+        className={`hidden md:flex flex-col ${collapsed ? 'w-16' : 'w-60'} bg-[#f5f5f7] dark:bg-[#1d1d1f] border-r border-[#d2d2d7] dark:border-[#424245] transition-all duration-200`}
       >
         {/* Logo */}
         <div
-          className={`h-14 flex items-center ${collapsed ? 'justify-center px-2' : 'justify-between px-4'} border-b border-zinc-100 dark:border-zinc-800`}
+          className={`h-12 flex items-center ${collapsed ? 'justify-center px-2' : 'justify-between px-4'} border-b border-[#d2d2d7] dark:border-[#424245]`}
         >
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-accent-600 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
               T
             </div>
             {!collapsed && (
-              <span className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Tymes</span>
+              <span className="text-[17px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                Tymes
+              </span>
             )}
           </div>
           {!collapsed && (
             <button
               onClick={() => setCollapsed(true)}
-              className="p-1.5 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 dark:hover:text-zinc-300 dark:hover:bg-zinc-800 transition-colors"
-              aria-label="Collapse sidebar"
+              className="p-1.5 rounded-lg text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7] hover:bg-white dark:hover:bg-[#2d2d2d] transition-colors"
             >
               <PanelLeftClose size={18} />
             </button>
@@ -155,8 +160,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="p-2">
             <button
               onClick={() => setCollapsed(false)}
-              className="w-full p-2 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 dark:hover:text-zinc-300 dark:hover:bg-zinc-800 transition-colors flex justify-center"
-              aria-label="Expand sidebar"
+              className="w-full p-2 rounded-lg text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7] hover:bg-white dark:hover:bg-[#2d2d2d] transition-colors flex justify-center"
             >
               <PanelLeft size={18} />
             </button>
@@ -167,33 +171,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className={`${collapsed ? 'px-2 py-3' : 'p-3'} relative`}>
           <button
             onClick={() => !collapsed && setShowAccountSwitcher(!showAccountSwitcher)}
-            className={`w-full ${collapsed ? 'p-2 justify-center' : 'p-2.5'} rounded-lg bg-zinc-50 dark:bg-zinc-800/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors flex items-center gap-2.5`}
+            className={`w-full ${collapsed ? 'p-2 justify-center' : 'p-3'} rounded-xl bg-white dark:bg-[#2d2d2d] hover:bg-[#e8e8ed] dark:hover:bg-[#3d3d3d] transition-colors flex items-center gap-3`}
             title={collapsed ? profile?.name : undefined}
           >
             {profile?.avatar_url ? (
               <img
                 src={profile.avatar_url}
                 alt=""
-                className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                className="w-9 h-9 rounded-full object-cover flex-shrink-0"
               />
             ) : (
-              <div className="w-8 h-8 rounded-full bg-accent-600 flex items-center justify-center text-white text-sm font-medium flex-shrink-0">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white text-sm font-medium flex-shrink-0">
                 {profile?.name?.charAt(0).toUpperCase() || 'U'}
               </div>
             )}
             {!collapsed && (
               <>
                 <div className="flex-1 text-left min-w-0">
-                  <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
-                    {profile?.name || 'User'}
+                  <p className="text-[14px] font-medium text-[#1d1d1f] dark:text-[#f5f5f7] truncate">
+                    {profile?.name || 'Usuário'}
                   </p>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  <p className="text-[12px] text-[#86868b]">
                     {getProfileLabel(profile?.type || 'PERSONAL')}
                   </p>
                 </div>
                 <ChevronDown
                   size={16}
-                  className={`text-zinc-400 transition-transform flex-shrink-0 ${showAccountSwitcher ? 'rotate-180' : ''}`}
+                  className={`text-[#86868b] transition-transform flex-shrink-0 ${showAccountSwitcher ? 'rotate-180' : ''}`}
                 />
               </>
             )}
@@ -201,32 +205,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           {/* Account Dropdown */}
           {showAccountSwitcher && !collapsed && (
-            <div className="absolute top-full left-3 right-3 mt-1 bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden z-50">
+            <div className="absolute top-full left-3 right-3 mt-1 bg-white dark:bg-[#2d2d2d] rounded-xl shadow-lg border border-[#d2d2d7] dark:border-[#424245] overflow-hidden z-50">
               {otherAccounts.length > 0 && (
                 <>
-                  <div className="px-3 py-2 border-b border-zinc-100 dark:border-zinc-700">
-                    <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide">
-                      Other accounts
+                  <div className="px-3 py-2 border-b border-[#d2d2d7] dark:border-[#424245]">
+                    <p className="text-[11px] font-medium text-[#86868b] uppercase tracking-wide">
+                      Outras contas
                     </p>
                   </div>
                   <div className="max-h-32 overflow-y-auto">
                     {otherAccounts.map(account => (
                       <div
                         key={account.id}
-                        className="flex items-center hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors"
+                        className="flex items-center hover:bg-[#f5f5f7] dark:hover:bg-[#3d3d3d] transition-colors"
                       >
                         <button
                           onClick={() => handleSwitchAccount(account.id)}
                           className="flex-1 flex items-center gap-2.5 p-2.5"
                         >
-                          <div className="w-7 h-7 rounded-full bg-emerald-600 flex items-center justify-center text-white text-xs font-medium">
+                          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white text-xs font-medium">
                             {account.name?.charAt(0).toUpperCase() || 'U'}
                           </div>
                           <div className="flex-1 text-left min-w-0">
-                            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
+                            <p className="text-[13px] font-medium text-[#1d1d1f] dark:text-[#f5f5f7] truncate">
                               {account.name}
                             </p>
-                            <p className="text-xs text-zinc-500 truncate">{account.email}</p>
+                            <p className="text-[11px] text-[#86868b] truncate">{account.email}</p>
                           </div>
                         </button>
                         <button
@@ -234,8 +238,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             e.stopPropagation();
                             removeAccount(account.id);
                           }}
-                          className="p-2 mr-1 text-zinc-400 hover:text-red-500 transition-colors"
-                          aria-label="Remove account"
+                          className="p-2 mr-1 text-[#86868b] hover:text-red-500 transition-colors"
                         >
                           <Trash2 size={14} />
                         </button>
@@ -244,16 +247,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </div>
                 </>
               )}
-              <div className="p-2 border-t border-zinc-100 dark:border-zinc-700">
+              <div className="p-2 border-t border-[#d2d2d7] dark:border-[#424245]">
                 <button
                   onClick={() => {
                     setShowAccountSwitcher(false);
                     setShowAccountModal(true);
                   }}
-                  className="w-full flex items-center justify-center gap-2 p-2 text-sm font-medium text-accent-600 dark:text-accent-400 hover:bg-accent-50 dark:hover:bg-accent-900/20 rounded-md transition-colors"
+                  className="w-full flex items-center justify-center gap-2 p-2 text-[13px] font-medium text-[#0066cc] hover:bg-[#f5f5f7] dark:hover:bg-[#3d3d3d] rounded-lg transition-colors"
                 >
                   <UserPlus size={16} />
-                  Add account
+                  Adicionar conta
                 </button>
               </div>
             </div>
@@ -263,11 +266,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Admin Badge */}
         {isSuperAdmin && !collapsed && (
           <div className="px-3 mb-2">
-            <div className="p-2.5 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-100 dark:border-red-900/30">
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-100 dark:border-red-900/30">
               <div className="flex items-center gap-2">
                 <Shield size={14} className="text-red-600 dark:text-red-400" />
-                <span className="text-sm font-medium text-red-700 dark:text-red-300">
-                  Admin Panel
+                <span className="text-[13px] font-medium text-red-700 dark:text-red-300">
+                  Painel Admin
                 </span>
               </div>
             </div>
@@ -277,14 +280,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Module Header */}
         {!isSuperAdmin && !isRootModule && !collapsed && (
           <div className="px-3 mb-2">
-            <div className="p-2.5 bg-accent-50 dark:bg-accent-900/20 rounded-lg border border-accent-100 dark:border-accent-900/30">
+            <div className="p-3 bg-white dark:bg-[#2d2d2d] rounded-xl border border-[#d2d2d7] dark:border-[#424245]">
               <button
                 onClick={() => onNavigate(ModuleType.EXPLORE)}
-                className="flex items-center gap-1.5 text-xs font-medium text-accent-600 dark:text-accent-400 mb-1 hover:underline"
+                className="flex items-center gap-1.5 text-[12px] font-medium text-[#0066cc] mb-1 hover:underline"
               >
-                <ArrowLeft size={12} /> Back
+                <ArrowLeft size={12} /> Voltar
               </button>
-              <p className="text-sm font-medium text-accent-900 dark:text-accent-100">
+              <p className="text-[14px] font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">
                 {currentModuleMenu?.title}
               </p>
             </div>
@@ -296,8 +299,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="px-2 mb-2">
             <button
               onClick={() => onNavigate(ModuleType.EXPLORE)}
-              className="w-full p-2 rounded-md bg-accent-50 dark:bg-accent-900/20 text-accent-600 dark:text-accent-400 flex justify-center"
-              aria-label="Back"
+              className="w-full p-2 rounded-lg bg-white dark:bg-[#2d2d2d] text-[#0066cc] flex justify-center"
             >
               <ArrowLeft size={18} />
             </button>
@@ -305,7 +307,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
 
         {/* Navigation */}
-        <nav className={`flex-1 ${collapsed ? 'px-2' : 'px-3'} space-y-0.5 overflow-y-auto`}>
+        <nav className={`flex-1 ${collapsed ? 'px-2' : 'px-3'} space-y-1 overflow-y-auto`}>
           {/* SuperAdmin Navigation */}
           {isSuperAdmin &&
             superAdminMenu?.items.map(item => (
@@ -313,10 +315,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 key={item.id}
                 onClick={() => onPageChange(item.id)}
                 title={collapsed ? item.label : undefined}
-                className={`w-full flex items-center ${collapsed ? 'justify-center p-2.5' : 'gap-2.5 px-3 py-2'} rounded-md text-sm transition-colors ${
+                className={`w-full flex items-center ${collapsed ? 'justify-center p-2.5' : 'gap-3 px-3 py-2.5'} rounded-xl text-[14px] transition-colors ${
                   activePage === item.id
                     ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-medium'
-                    : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                    : 'text-[#1d1d1f] dark:text-[#f5f5f7] hover:bg-white dark:hover:bg-[#2d2d2d]'
                 }`}
               >
                 <item.icon size={18} />
@@ -335,10 +337,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   key={item.id}
                   onClick={() => onNavigate(item.id)}
                   title={collapsed ? item.label : undefined}
-                  className={`w-full flex items-center ${collapsed ? 'justify-center p-2.5' : 'gap-2.5 px-3 py-2'} rounded-md text-sm transition-colors ${
+                  className={`w-full flex items-center ${collapsed ? 'justify-center p-2.5' : 'gap-3 px-3 py-2.5'} rounded-xl text-[14px] transition-colors ${
                     isActive
-                      ? 'bg-accent-50 dark:bg-accent-900/20 text-accent-600 dark:text-accent-400 font-medium'
-                      : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                      ? 'bg-white dark:bg-[#2d2d2d] text-[#0066cc] font-medium shadow-sm'
+                      : 'text-[#1d1d1f] dark:text-[#f5f5f7] hover:bg-white dark:hover:bg-[#2d2d2d]'
                   }`}
                 >
                   <Icon size={18} />
@@ -357,10 +359,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   key={item.id}
                   onClick={() => onPageChange(item.id)}
                   title={collapsed ? item.label : undefined}
-                  className={`w-full flex items-center ${collapsed ? 'justify-center p-2.5' : 'gap-2.5 px-3 py-2'} rounded-md text-sm transition-colors ${
+                  className={`w-full flex items-center ${collapsed ? 'justify-center p-2.5' : 'gap-3 px-3 py-2.5'} rounded-xl text-[14px] transition-colors ${
                     activePage === item.id
-                      ? 'bg-accent-50 dark:bg-accent-900/20 text-accent-600 dark:text-accent-400 font-medium'
-                      : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                      ? 'bg-white dark:bg-[#2d2d2d] text-[#0066cc] font-medium shadow-sm'
+                      : 'text-[#1d1d1f] dark:text-[#f5f5f7] hover:bg-white dark:hover:bg-[#2d2d2d]'
                   }`}
                 >
                   <item.icon size={18} />
@@ -371,45 +373,45 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Bottom Actions */}
         <div
-          className={`${collapsed ? 'p-2' : 'p-3'} border-t border-zinc-100 dark:border-zinc-800 space-y-0.5`}
+          className={`${collapsed ? 'p-2' : 'p-3'} border-t border-[#d2d2d7] dark:border-[#424245] space-y-1`}
         >
           {!isSuperAdmin && (
             <button
               onClick={() => onNavigate(ModuleType.PROFILE)}
-              title={collapsed ? 'My Profile' : undefined}
-              className={`w-full flex items-center ${collapsed ? 'justify-center p-2.5' : 'gap-2.5 px-3 py-2'} rounded-md text-sm transition-colors ${
+              title={collapsed ? 'Meu Perfil' : undefined}
+              className={`w-full flex items-center ${collapsed ? 'justify-center p-2.5' : 'gap-3 px-3 py-2.5'} rounded-xl text-[14px] transition-colors ${
                 activeModule === ModuleType.PROFILE
-                  ? 'bg-accent-50 dark:bg-accent-900/20 text-accent-600 dark:text-accent-400 font-medium'
-                  : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                  ? 'bg-white dark:bg-[#2d2d2d] text-[#0066cc] font-medium shadow-sm'
+                  : 'text-[#1d1d1f] dark:text-[#f5f5f7] hover:bg-white dark:hover:bg-[#2d2d2d]'
               }`}
             >
               <UserCog size={18} />
-              {!collapsed && 'My Profile'}
+              {!collapsed && 'Meu Perfil'}
             </button>
           )}
           <button
             onClick={toggleTheme}
-            title={collapsed ? (theme === 'dark' ? 'Light Mode' : 'Dark Mode') : undefined}
-            className={`w-full flex items-center ${collapsed ? 'justify-center p-2.5' : 'gap-2.5 px-3 py-2'} rounded-md text-sm text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors`}
+            title={collapsed ? (theme === 'dark' ? 'Modo Claro' : 'Modo Escuro') : undefined}
+            className={`w-full flex items-center ${collapsed ? 'justify-center p-2.5' : 'gap-3 px-3 py-2.5'} rounded-xl text-[14px] text-[#1d1d1f] dark:text-[#f5f5f7] hover:bg-white dark:hover:bg-[#2d2d2d] transition-colors`}
           >
             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-            {!collapsed && (theme === 'dark' ? 'Light Mode' : 'Dark Mode')}
+            {!collapsed && (theme === 'dark' ? 'Modo Claro' : 'Modo Escuro')}
           </button>
           <button
             onClick={onLogout}
-            title={collapsed ? 'Sign Out' : undefined}
-            className={`w-full flex items-center ${collapsed ? 'justify-center p-2.5' : 'gap-2.5 px-3 py-2'} rounded-md text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors`}
+            title={collapsed ? 'Sair' : undefined}
+            className={`w-full flex items-center ${collapsed ? 'justify-center p-2.5' : 'gap-3 px-3 py-2.5'} rounded-xl text-[14px] text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors`}
           >
             <LogOut size={18} />
-            {!collapsed && 'Sign Out'}
+            {!collapsed && 'Sair'}
           </button>
         </div>
       </aside>
 
-      {/* Add Account Modal */}
+      {/* Add Account Modal - Apple Style */}
       {showAccountModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xl"
           onClick={() => {
             setShowAccountModal(false);
             setEmail('');
@@ -418,18 +420,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
           }}
         >
           <div
-            className="bg-white dark:bg-zinc-900 rounded-xl shadow-xl max-w-sm w-full border border-zinc-200 dark:border-zinc-800"
+            className="bg-white dark:bg-[#1d1d1f] rounded-[20px] shadow-2xl max-w-[360px] w-full"
             onClick={e => e.stopPropagation()}
           >
-            <div className="p-5">
-              <div className="flex items-center justify-between mb-5">
+            <div className="p-6">
+              <div className="flex items-start justify-between mb-6">
                 <div>
-                  <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-                    Add Account
+                  <h2 className="text-[22px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                    Adicionar Conta
                   </h2>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
-                    Sign in with another account
-                  </p>
+                  <p className="text-[14px] text-[#86868b] mt-1">Entre com outra conta</p>
                 </div>
                 <button
                   onClick={() => {
@@ -438,48 +438,47 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     setPassword('');
                     setError('');
                   }}
-                  className="p-1.5 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 dark:hover:text-zinc-300 dark:hover:bg-zinc-800 transition-colors"
-                  aria-label="Close"
+                  className="p-2 rounded-full hover:bg-[#f5f5f7] dark:hover:bg-[#2d2d2d] transition-colors"
                 >
-                  <X size={18} />
+                  <X size={18} className="text-[#86868b]" />
                 </button>
               </div>
 
               {error && (
-                <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-lg text-red-600 dark:text-red-400 text-sm">
+                <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-xl text-red-600 dark:text-red-400 text-[13px]">
                   {error}
                 </div>
               )}
 
               <form onSubmit={handleAddAccount} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+                  <label className="block text-[12px] font-medium text-[#86868b] uppercase tracking-wide mb-2">
                     Email
                   </label>
                   <div className="relative">
                     <Mail
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400"
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-[#86868b]"
                       size={18}
                     />
                     <input
                       type="email"
                       value={email}
                       onChange={e => setEmail(e.target.value)}
-                      placeholder="you@example.com"
+                      placeholder="seu@email.com"
                       required
                       disabled={loading}
-                      className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-accent-500/20 focus:border-accent-500 disabled:opacity-50 transition-colors"
+                      className="w-full pl-11 pr-4 py-3 rounded-xl bg-[#f5f5f7] dark:bg-[#2d2d2d] border border-[#d2d2d7] dark:border-[#424245] text-[15px] text-[#1d1d1f] dark:text-[#f5f5f7] placeholder-[#86868b] focus:outline-none focus:ring-2 focus:ring-[#0066cc] focus:border-transparent transition-all"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
-                    Password
+                  <label className="block text-[12px] font-medium text-[#86868b] uppercase tracking-wide mb-2">
+                    Senha
                   </label>
                   <div className="relative">
                     <Lock
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400"
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-[#86868b]"
                       size={18}
                     />
                     <input
@@ -490,7 +489,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       required
                       minLength={6}
                       disabled={loading}
-                      className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-accent-500/20 focus:border-accent-500 disabled:opacity-50 transition-colors"
+                      className="w-full pl-11 pr-4 py-3 rounded-xl bg-[#f5f5f7] dark:bg-[#2d2d2d] border border-[#d2d2d7] dark:border-[#424245] text-[15px] text-[#1d1d1f] dark:text-[#f5f5f7] placeholder-[#86868b] focus:outline-none focus:ring-2 focus:ring-[#0066cc] focus:border-transparent transition-all"
                     />
                   </div>
                 </div>
@@ -498,13 +497,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-2.5 rounded-lg bg-accent-600 text-white font-medium hover:bg-accent-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full py-3 rounded-full bg-[#0066cc] text-white text-[15px] font-normal hover:bg-[#0055b3] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  {loading ? <Loader2 size={18} className="animate-spin" /> : 'Sign In & Add'}
+                  {loading ? <Loader2 size={18} className="animate-spin" /> : 'Entrar e Adicionar'}
                 </button>
 
-                <p className="text-xs text-center text-zinc-500 dark:text-zinc-400">
-                  You will be signed out of the current account
+                <p className="text-[12px] text-center text-[#86868b]">
+                  Você será desconectado da conta atual
                 </p>
               </form>
             </div>
