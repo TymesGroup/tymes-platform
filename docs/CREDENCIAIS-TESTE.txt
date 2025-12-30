@@ -1,0 +1,16 @@
+🔐 CREDENCIAIS PARA TESTE
+
+Email: teste@tymes.com
+Senha: 123456
+
+✅ Esta conta foi criada e testada com sucesso!
+✅ O perfil existe e está funcionando corretamente.
+
+📱 Para testar:
+1. Abra: http://localhost:3001
+2. Faça login com as credenciais acima
+3. Você deve ser redirecionado automaticamente para o painel
+
+🐛 Se não funcionar:
+- Abra o Console (Cmd+Option+J)
+- Me envie os logs que aparecem

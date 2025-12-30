@@ -1,0 +1,1 @@
+CREATE POLICY "Users can view own subscriptions" ON user_subscriptions FOR SELECT USING (auth.uid() = user_id); CREATE POLICY "Superadmin can manage all subscriptions" ON user_subscriptions FOR ALL USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.type = 'SUPERADMIN'));;

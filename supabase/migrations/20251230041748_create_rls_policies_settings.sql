@@ -1,0 +1,1 @@
+CREATE POLICY "Settings are viewable by superadmin" ON system_settings FOR SELECT USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.type = 'SUPERADMIN')); CREATE POLICY "Settings are editable by superadmin" ON system_settings FOR ALL USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.type = 'SUPERADMIN'));;

@@ -1,0 +1,1 @@
+CREATE POLICY "Modules are viewable by everyone" ON platform_modules FOR SELECT USING (true); CREATE POLICY "Modules are editable by superadmin" ON platform_modules FOR ALL USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.type = 'SUPERADMIN'));;

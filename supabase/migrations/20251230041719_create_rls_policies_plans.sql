@@ -1,0 +1,1 @@
+CREATE POLICY "Plans are viewable by everyone" ON plans FOR SELECT USING (true); CREATE POLICY "Plans are editable by superadmin" ON plans FOR ALL USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.type = 'SUPERADMIN'));;
