@@ -1,3 +1,8 @@
+/**
+ * Auth Modal - Apple-inspired Design
+ * Modal de autenticação com design minimalista estilo Apple
+ */
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -80,7 +85,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Sync mode with initialMode when modal opens
   useEffect(() => {
     if (isOpen) {
       setMode(initialMode);
@@ -190,7 +194,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           setLoading(false);
           return;
         }
-
         await new Promise(resolve => setTimeout(resolve, 500));
         handleClose();
         navigate(redirectTo, { state: redirectState, replace: true });
@@ -236,78 +239,94 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     } catch (err: any) {
       setError(err.message || 'Erro inesperado. Tente novamente.');
     }
-
     setLoading(false);
   };
 
   if (!isOpen) return null;
 
+  // Apple-style input classes
   const inputClass =
-    'w-full pl-10 pr-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500';
-  const inputClassSimple =
-    'w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500';
+    'w-full px-4 py-3 rounded-xl bg-[#f5f5f7] dark:bg-[#1d1d1f] border border-[#d2d2d7] dark:border-[#424245] text-[15px] text-[#1d1d1f] dark:text-[#f5f5f7] placeholder-[#86868b] focus:outline-none focus:ring-2 focus:ring-[#0066cc] focus:border-transparent transition-all';
+  const inputWithIconClass =
+    'w-full pl-11 pr-4 py-3 rounded-xl bg-[#f5f5f7] dark:bg-[#1d1d1f] border border-[#d2d2d7] dark:border-[#424245] text-[15px] text-[#1d1d1f] dark:text-[#f5f5f7] placeholder-[#86868b] focus:outline-none focus:ring-2 focus:ring-[#0066cc] focus:border-transparent transition-all';
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xl"
       onClick={handleClose}
     >
       <div
-        className="bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto"
+        className="bg-white dark:bg-[#1d1d1f] rounded-[20px] shadow-2xl max-w-[400px] w-full max-h-[90vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
-        <div className="p-6">
+        <div className="p-8">
           {/* Header */}
-          <div className="flex items-center justify-between mb-5">
+          <div className="flex items-start justify-between mb-6">
             <div>
-              <h2 className="text-2xl font-bold">
+              {/* Logo */}
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold text-lg mb-4">
+                T
+              </div>
+              <h2 className="text-[28px] font-semibold tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7]">
                 {mode === 'login'
                   ? 'Entrar'
                   : registerStep === 'BASIC'
-                    ? 'Criar Conta'
-                    : 'Seu Endereço'}
+                    ? 'Criar conta'
+                    : 'Endereço'}
               </h2>
-              {moduleName && <p className="text-sm text-zinc-500 mt-1">Acessar {moduleName}</p>}
-              {mode === 'signup' && (
-                <div className="flex gap-1.5 mt-3">
-                  <div
-                    className={`w-8 h-1 rounded-full ${registerStep === 'BASIC' ? 'bg-indigo-600' : 'bg-zinc-200 dark:bg-zinc-700'}`}
-                  />
-                  <div
-                    className={`w-8 h-1 rounded-full ${registerStep === 'ADDRESS' ? 'bg-indigo-600' : 'bg-zinc-200 dark:bg-zinc-700'}`}
-                  />
-                </div>
+              {moduleName && (
+                <p className="text-[15px] text-[#86868b] mt-1">Acessar {moduleName}</p>
               )}
             </div>
             <button
               onClick={handleClose}
-              className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+              className="p-2 hover:bg-[#f5f5f7] dark:hover:bg-[#2d2d2d] rounded-full transition-colors"
             >
-              <X size={20} />
+              <X size={20} className="text-[#86868b]" />
             </button>
           </div>
 
+          {/* Progress Steps - Only for signup */}
+          {mode === 'signup' && (
+            <div className="flex gap-2 mb-6">
+              <div
+                className={`flex-1 h-1 rounded-full ${registerStep === 'BASIC' ? 'bg-[#0066cc]' : 'bg-[#d2d2d7] dark:bg-[#424245]'}`}
+              />
+              <div
+                className={`flex-1 h-1 rounded-full ${registerStep === 'ADDRESS' ? 'bg-[#0066cc]' : 'bg-[#d2d2d7] dark:bg-[#424245]'}`}
+              />
+            </div>
+          )}
+
           {/* Error */}
           {error && (
-            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-600 dark:text-red-400 text-sm">
+            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl text-red-600 dark:text-red-400 text-[14px]">
               {error}
             </div>
           )}
 
           {/* Profile Type Toggle - Only for signup step 1 */}
           {mode === 'signup' && registerStep === 'BASIC' && (
-            <div className="flex p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl mb-5">
+            <div className="flex p-1 bg-[#f5f5f7] dark:bg-[#2d2d2d] rounded-full mb-6">
               <button
                 type="button"
                 onClick={() => setProfileType('PERSONAL')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-lg transition-all ${profileType === 'PERSONAL' ? 'bg-white dark:bg-zinc-700 text-indigo-600 dark:text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-700'}`}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-[14px] font-medium rounded-full transition-all ${
+                  profileType === 'PERSONAL'
+                    ? 'bg-white dark:bg-[#1d1d1f] text-[#1d1d1f] dark:text-[#f5f5f7] shadow-sm'
+                    : 'text-[#86868b]'
+                }`}
               >
                 <User size={16} /> Pessoal
               </button>
               <button
                 type="button"
                 onClick={() => setProfileType('BUSINESS')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-lg transition-all ${profileType === 'BUSINESS' ? 'bg-white dark:bg-zinc-700 text-indigo-600 dark:text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-700'}`}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-[14px] font-medium rounded-full transition-all ${
+                  profileType === 'BUSINESS'
+                    ? 'bg-white dark:bg-[#1d1d1f] text-[#1d1d1f] dark:text-[#f5f5f7] shadow-sm'
+                    : 'text-[#86868b]'
+                }`}
               >
                 <Building2 size={16} /> Negócios
               </button>
@@ -319,9 +338,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             {mode === 'login' ? (
               <>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Email</label>
+                  <label className="block text-[12px] font-medium text-[#86868b] uppercase tracking-wide mb-2">
+                    Email
+                  </label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-3.5 text-zinc-400" size={18} />
+                    <Mail className="absolute left-4 top-3.5 text-[#86868b]" size={18} />
                     <input
                       type="email"
                       value={email}
@@ -329,14 +350,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       placeholder="seu@email.com"
                       required
                       disabled={loading}
-                      className={inputClass}
+                      className={inputWithIconClass}
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Senha</label>
+                  <label className="block text-[12px] font-medium text-[#86868b] uppercase tracking-wide mb-2">
+                    Senha
+                  </label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-3.5 text-zinc-400" size={18} />
+                    <Lock className="absolute left-4 top-3.5 text-[#86868b]" size={18} />
                     <input
                       type="password"
                       value={password}
@@ -345,7 +368,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       required
                       minLength={6}
                       disabled={loading}
-                      className={inputClass}
+                      className={inputWithIconClass}
                     />
                   </div>
                 </div>
@@ -353,27 +376,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             ) : registerStep === 'BASIC' ? (
               <>
                 <div>
-                  <label className="block text-sm font-medium mb-2">
+                  <label className="block text-[12px] font-medium text-[#86868b] uppercase tracking-wide mb-2">
                     {profileType === 'PERSONAL' ? 'Nome Completo' : 'Razão Social'}
                   </label>
                   <div className="relative">
-                    <User className="absolute left-3 top-3.5 text-zinc-400" size={18} />
+                    <User className="absolute left-4 top-3.5 text-[#86868b]" size={18} />
                     <input
                       type="text"
                       value={name}
                       onChange={e => setName(e.target.value)}
                       placeholder={profileType === 'PERSONAL' ? 'Seu nome' : 'Nome da empresa'}
                       disabled={loading}
-                      className={inputClass}
+                      className={inputWithIconClass}
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">
+                  <label className="block text-[12px] font-medium text-[#86868b] uppercase tracking-wide mb-2">
                     {profileType === 'PERSONAL' ? 'CPF' : 'CNPJ'}
                   </label>
                   <div className="relative">
-                    <Fingerprint className="absolute left-3 top-3.5 text-zinc-400" size={18} />
+                    <Fingerprint className="absolute left-4 top-3.5 text-[#86868b]" size={18} />
                     <input
                       type="text"
                       value={document}
@@ -382,47 +405,53 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                         profileType === 'PERSONAL' ? '000.000.000-00' : '00.000.000/0001-00'
                       }
                       disabled={loading}
-                      className={inputClass}
+                      className={inputWithIconClass}
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Data de Nascimento</label>
+                  <label className="block text-[12px] font-medium text-[#86868b] uppercase tracking-wide mb-2">
+                    Data de Nascimento
+                  </label>
                   <div className="relative">
-                    <Calendar className="absolute left-3 top-3.5 text-zinc-400" size={18} />
+                    <Calendar className="absolute left-4 top-3.5 text-[#86868b]" size={18} />
                     <input
                       type="date"
                       value={birthDate}
                       onChange={e => setBirthDate(e.target.value)}
                       disabled={loading}
                       max={new Date().toISOString().split('T')[0]}
-                      className={inputClass}
+                      className={inputWithIconClass}
                     />
                   </div>
                   {ageGroupInfo && (
-                    <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-1">
+                    <p className="text-[12px] text-[#0066cc] mt-1">
                       Faixa etária: {ageGroupInfo.label}
                     </p>
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Telefone</label>
+                  <label className="block text-[12px] font-medium text-[#86868b] uppercase tracking-wide mb-2">
+                    Telefone
+                  </label>
                   <div className="relative">
-                    <Phone className="absolute left-3 top-3.5 text-zinc-400" size={18} />
+                    <Phone className="absolute left-4 top-3.5 text-[#86868b]" size={18} />
                     <input
                       type="tel"
                       value={phone}
                       onChange={e => setPhone(e.target.value)}
                       placeholder="(00) 00000-0000"
                       disabled={loading}
-                      className={inputClass}
+                      className={inputWithIconClass}
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Email</label>
+                  <label className="block text-[12px] font-medium text-[#86868b] uppercase tracking-wide mb-2">
+                    Email
+                  </label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-3.5 text-zinc-400" size={18} />
+                    <Mail className="absolute left-4 top-3.5 text-[#86868b]" size={18} />
                     <input
                       type="email"
                       value={email}
@@ -430,14 +459,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       placeholder="seu@email.com"
                       required
                       disabled={loading}
-                      className={inputClass}
+                      className={inputWithIconClass}
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Senha</label>
+                  <label className="block text-[12px] font-medium text-[#86868b] uppercase tracking-wide mb-2">
+                    Senha
+                  </label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-3.5 text-zinc-400" size={18} />
+                    <Lock className="absolute left-4 top-3.5 text-[#86868b]" size={18} />
                     <input
                       type="password"
                       value={password}
@@ -446,7 +477,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       required
                       minLength={6}
                       disabled={loading}
-                      className={inputClass}
+                      className={inputWithIconClass}
                     />
                   </div>
                 </div>
@@ -454,9 +485,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             ) : (
               <>
                 <div>
-                  <label className="block text-sm font-medium mb-2">CEP</label>
+                  <label className="block text-[12px] font-medium text-[#86868b] uppercase tracking-wide mb-2">
+                    CEP
+                  </label>
                   <div className="relative">
-                    <MapPin className="absolute left-3 top-3.5 text-zinc-400" size={18} />
+                    <MapPin className="absolute left-4 top-3.5 text-[#86868b]" size={18} />
                     <input
                       type="text"
                       value={formatCEP(addressZipCode)}
@@ -464,79 +497,91 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       placeholder="00000-000"
                       maxLength={9}
                       disabled={loading}
-                      className={inputClass}
+                      className={inputWithIconClass}
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Rua / Logradouro</label>
+                  <label className="block text-[12px] font-medium text-[#86868b] uppercase tracking-wide mb-2">
+                    Rua / Logradouro
+                  </label>
                   <div className="relative">
-                    <Home className="absolute left-3 top-3.5 text-zinc-400" size={18} />
+                    <Home className="absolute left-4 top-3.5 text-[#86868b]" size={18} />
                     <input
                       type="text"
                       value={addressStreet}
                       onChange={e => setAddressStreet(e.target.value)}
                       placeholder="Nome da rua"
                       disabled={loading}
-                      className={inputClass}
+                      className={inputWithIconClass}
                     />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium mb-2">Número</label>
+                    <label className="block text-[12px] font-medium text-[#86868b] uppercase tracking-wide mb-2">
+                      Número
+                    </label>
                     <input
                       type="text"
                       value={addressNumber}
                       onChange={e => setAddressNumber(e.target.value)}
                       placeholder="123"
                       disabled={loading}
-                      className={inputClassSimple}
+                      className={inputClass}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Complemento</label>
+                    <label className="block text-[12px] font-medium text-[#86868b] uppercase tracking-wide mb-2">
+                      Complemento
+                    </label>
                     <input
                       type="text"
                       value={addressComplement}
                       onChange={e => setAddressComplement(e.target.value)}
                       placeholder="Apto 101"
                       disabled={loading}
-                      className={inputClassSimple}
+                      className={inputClass}
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Bairro</label>
+                  <label className="block text-[12px] font-medium text-[#86868b] uppercase tracking-wide mb-2">
+                    Bairro
+                  </label>
                   <input
                     type="text"
                     value={addressNeighborhood}
                     onChange={e => setAddressNeighborhood(e.target.value)}
                     placeholder="Nome do bairro"
                     disabled={loading}
-                    className={inputClassSimple}
+                    className={inputClass}
                   />
                 </div>
                 <div className="grid grid-cols-3 gap-3">
                   <div className="col-span-2">
-                    <label className="block text-sm font-medium mb-2">Cidade</label>
+                    <label className="block text-[12px] font-medium text-[#86868b] uppercase tracking-wide mb-2">
+                      Cidade
+                    </label>
                     <input
                       type="text"
                       value={addressCity}
                       onChange={e => setAddressCity(e.target.value)}
                       placeholder="Sua cidade"
                       disabled={loading}
-                      className={inputClassSimple}
+                      className={inputClass}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Estado</label>
+                    <label className="block text-[12px] font-medium text-[#86868b] uppercase tracking-wide mb-2">
+                      Estado
+                    </label>
                     <div className="relative">
                       <select
                         value={addressState}
                         onChange={e => setAddressState(e.target.value)}
                         disabled={loading}
-                        className={`${inputClassSimple} appearance-none pr-8`}
+                        className={`${inputClass} appearance-none pr-8`}
                       >
                         <option value="">UF</option>
                         {BRAZILIAN_STATES.map(state => (
@@ -546,7 +591,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                         ))}
                       </select>
                       <ChevronDown
-                        className="absolute right-2 top-3.5 text-zinc-400 pointer-events-none"
+                        className="absolute right-3 top-3.5 text-[#86868b] pointer-events-none"
                         size={16}
                       />
                     </div>
@@ -558,19 +603,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     setRegisterStep('BASIC');
                     setError(null);
                   }}
-                  className="w-full text-sm text-zinc-500 hover:text-indigo-600 py-2 flex items-center justify-center gap-1"
+                  className="w-full text-[14px] text-[#0066cc] py-2 flex items-center justify-center gap-1 hover:underline"
                   disabled={loading}
                 >
-                  <ArrowLeft size={14} /> Voltar para dados pessoais
+                  <ArrowLeft size={14} /> Voltar
                 </button>
               </>
             )}
 
+            {/* Submit Button - Apple Style */}
             <button
               type={mode === 'signup' && registerStep === 'BASIC' ? 'button' : 'submit'}
               onClick={mode === 'signup' && registerStep === 'BASIC' ? handleNextStep : undefined}
               disabled={loading}
-              className="w-full py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full py-3.5 rounded-full bg-[#0066cc] text-white text-[17px] font-normal hover:bg-[#0055b3] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading ? <Loader2 size={20} className="animate-spin" /> : null}
               {loading
@@ -579,10 +625,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   ? 'Entrar'
                   : registerStep === 'BASIC'
                     ? 'Continuar'
-                    : 'Criar Conta'}
+                    : 'Criar conta'}
             </button>
 
-            <div className="text-center text-sm text-zinc-500 pt-2">
+            {/* Toggle Mode Link */}
+            <div className="text-center text-[14px] text-[#86868b] pt-2">
               {mode === 'login' ? (
                 <>
                   Não tem uma conta?{' '}
@@ -593,7 +640,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       setError(null);
                       resetForm();
                     }}
-                    className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline"
+                    className="text-[#0066cc] hover:underline"
                   >
                     Criar conta
                   </button>
@@ -608,7 +655,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       setError(null);
                       resetForm();
                     }}
-                    className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline"
+                    className="text-[#0066cc] hover:underline"
                   >
                     Entrar
                   </button>

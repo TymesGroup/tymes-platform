@@ -24,6 +24,8 @@ import {
   Star,
 } from 'lucide-react';
 import { AuthModal } from '../../components/shared/AuthModal';
+import { LandingFooter } from './components/LandingFooter';
+import { AccountTypesSection } from './components/AccountTypesSection';
 
 type ModuleType = 'shop' | 'class' | 'work' | 'social';
 
@@ -301,8 +303,11 @@ export const ModuleLanding: React.FC<ModuleLandingProps> = ({ module }) => {
         </div>
       </section>
 
+      {/* Account Types Section */}
+      <AccountTypesSection onSignup={() => openAuth('signup')} />
+
       {/* CTA Section */}
-      <section className="py-24 px-6 bg-white dark:bg-black">
+      <section className="py-24 px-6 bg-[#f5f5f7] dark:bg-[#1d1d1f]">
         <div className="max-w-[980px] mx-auto text-center">
           <h2 className="text-[48px] sm:text-[56px] font-semibold tracking-tight leading-[1.05] text-[#1d1d1f] dark:text-[#f5f5f7]">
             Pronto para começar com {config.title}?
@@ -329,35 +334,7 @@ export const ModuleLanding: React.FC<ModuleLandingProps> = ({ module }) => {
       </section>
 
       {/* Footer */}
-      <footer className="bg-[#f5f5f7] dark:bg-[#1d1d1f] border-t border-[#d2d2d7] dark:border-[#424245]">
-        <div className="max-w-[980px] mx-auto px-6 py-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-[12px] text-[#86868b]">
-              © 2025 Tymes Platform. Todos os direitos reservados.
-            </p>
-            <div className="flex items-center gap-6 text-[12px]">
-              <a
-                href="#"
-                className="text-[#424245] dark:text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7] transition-colors"
-              >
-                Termos
-              </a>
-              <a
-                href="#"
-                className="text-[#424245] dark:text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7] transition-colors"
-              >
-                Privacidade
-              </a>
-              <a
-                href="#"
-                className="text-[#424245] dark:text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7] transition-colors"
-              >
-                Contato
-              </a>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <LandingFooter />
 
       {/* Auth Modal */}
       <AuthModal

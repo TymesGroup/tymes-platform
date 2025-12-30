@@ -14,6 +14,8 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { AuthModal } from '../../components/shared/AuthModal';
+import { LandingFooter } from './components/LandingFooter';
+import { AccountTypesSection } from './components/AccountTypesSection';
 
 interface LandingProps {
   onEnter: () => void;
@@ -46,8 +48,6 @@ export const Landing: React.FC<LandingProps> = ({ onEnter }) => {
       description:
         'Vitrine profissional. Gestão de pedidos. Pagamentos integrados. Tudo que você precisa para vender online.',
       gradient: 'from-emerald-400 to-teal-500',
-      bgColor: 'bg-[#f5f5f7]',
-      darkBg: 'bg-black',
     },
     {
       id: 'class',
@@ -58,8 +58,6 @@ export const Landing: React.FC<LandingProps> = ({ onEnter }) => {
       description:
         'Cursos em alta definição. Certificados reconhecidos. Área completa do professor. Educação sem fronteiras.',
       gradient: 'from-blue-400 to-indigo-500',
-      bgColor: 'bg-white',
-      darkBg: 'bg-[#1d1d1f]',
     },
     {
       id: 'work',
@@ -70,8 +68,6 @@ export const Landing: React.FC<LandingProps> = ({ onEnter }) => {
       description:
         'Gestão ágil de projetos. Colaboração em equipe. Controle de tempo. Entregue mais, com menos esforço.',
       gradient: 'from-purple-400 to-pink-500',
-      bgColor: 'bg-[#f5f5f7]',
-      darkBg: 'bg-black',
     },
     {
       id: 'social',
@@ -82,8 +78,6 @@ export const Landing: React.FC<LandingProps> = ({ onEnter }) => {
       description:
         'Feed inteligente. Mensagens em tempo real. Campanhas de marketing. Networking que gera resultados.',
       gradient: 'from-orange-400 to-red-500',
-      bgColor: 'bg-white',
-      darkBg: 'bg-[#1d1d1f]',
     },
   ];
 
@@ -245,8 +239,11 @@ export const Landing: React.FC<LandingProps> = ({ onEnter }) => {
         </section>
       ))}
 
+      {/* Account Types Section */}
+      <AccountTypesSection onSignup={() => openAuth('signup')} />
+
       {/* Pricing Section - Apple Style */}
-      <section id="pricing" className="py-24 px-6 bg-white dark:bg-black">
+      <section id="pricing" className="py-24 px-6 bg-[#f5f5f7] dark:bg-[#1d1d1f]">
         <div className="max-w-[980px] mx-auto">
           {/* Section Header */}
           <div className="text-center mb-16">
@@ -296,14 +293,10 @@ export const Landing: React.FC<LandingProps> = ({ onEnter }) => {
                 className={`relative p-8 rounded-[20px] transition-all ${
                   plan.highlighted
                     ? 'bg-[#1d1d1f] dark:bg-[#f5f5f7] text-[#f5f5f7] dark:text-[#1d1d1f]'
-                    : 'bg-[#f5f5f7] dark:bg-[#1d1d1f] text-[#1d1d1f] dark:text-[#f5f5f7]'
+                    : 'bg-white dark:bg-black text-[#1d1d1f] dark:text-[#f5f5f7]'
                 }`}
               >
-                <p
-                  className={`text-[12px] font-semibold uppercase tracking-wide mb-2 ${
-                    plan.highlighted ? 'text-[#86868b]' : 'text-[#86868b]'
-                  }`}
-                >
+                <p className="text-[12px] font-semibold uppercase tracking-wide mb-2 text-[#86868b]">
                   {plan.name}
                 </p>
 
@@ -331,11 +324,7 @@ export const Landing: React.FC<LandingProps> = ({ onEnter }) => {
 
                 <button
                   onClick={() => openAuth('signup')}
-                  className={`w-full py-3 rounded-full text-[14px] font-semibold transition-all ${
-                    plan.highlighted
-                      ? 'bg-[#0066cc] text-white hover:bg-[#0055b3]'
-                      : 'bg-[#0066cc] text-white hover:bg-[#0055b3]'
-                  }`}
+                  className="w-full py-3 rounded-full bg-[#0066cc] text-white text-[14px] font-semibold hover:bg-[#0055b3] transition-colors"
                 >
                   {plan.price === 'Grátis' ? 'Começar grátis' : 'Assinar'}
                 </button>
@@ -346,7 +335,7 @@ export const Landing: React.FC<LandingProps> = ({ onEnter }) => {
       </section>
 
       {/* Final CTA Section - Apple Style */}
-      <section className="py-24 px-6 bg-[#f5f5f7] dark:bg-[#1d1d1f]">
+      <section className="py-24 px-6 bg-white dark:bg-black">
         <div className="max-w-[980px] mx-auto text-center">
           <h2 className="text-[48px] sm:text-[56px] font-semibold tracking-tight leading-[1.05] text-[#1d1d1f] dark:text-[#f5f5f7]">
             Pronto para começar?
@@ -372,97 +361,8 @@ export const Landing: React.FC<LandingProps> = ({ onEnter }) => {
         </div>
       </section>
 
-      {/* Footer - Apple Style */}
-      <footer className="bg-[#f5f5f7] dark:bg-[#1d1d1f] border-t border-[#d2d2d7] dark:border-[#424245]">
-        <div className="max-w-[980px] mx-auto px-6 py-12">
-          {/* Footer Links */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
-            <div>
-              <h4 className="text-[12px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] mb-4">
-                Módulos
-              </h4>
-              <ul className="space-y-2">
-                {modules.map(m => (
-                  <li key={m.id}>
-                    <a
-                      href={`#${m.id}`}
-                      className="text-[12px] text-[#424245] dark:text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7] transition-colors"
-                    >
-                      {m.title}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="text-[12px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] mb-4">
-                Empresa
-              </h4>
-              <ul className="space-y-2">
-                {['Sobre', 'Blog', 'Carreiras', 'Imprensa'].map(item => (
-                  <li key={item}>
-                    <a
-                      href="#"
-                      className="text-[12px] text-[#424245] dark:text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7] transition-colors"
-                    >
-                      {item}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="text-[12px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] mb-4">
-                Suporte
-              </h4>
-              <ul className="space-y-2">
-                {['Central de Ajuda', 'Documentação', 'API', 'Status'].map(item => (
-                  <li key={item}>
-                    <a
-                      href="#"
-                      className="text-[12px] text-[#424245] dark:text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7] transition-colors"
-                    >
-                      {item}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="text-[12px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] mb-4">
-                Legal
-              </h4>
-              <ul className="space-y-2">
-                {['Termos de Uso', 'Privacidade', 'Cookies', 'LGPD'].map(item => (
-                  <li key={item}>
-                    <a
-                      href="#"
-                      className="text-[12px] text-[#424245] dark:text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7] transition-colors"
-                    >
-                      {item}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          {/* Footer Bottom */}
-          <div className="pt-8 border-t border-[#d2d2d7] dark:border-[#424245]">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-              <p className="text-[12px] text-[#86868b]">
-                © 2025 Tymes Platform. Todos os direitos reservados.
-              </p>
-              <div className="flex items-center gap-4">
-                <span className="text-[12px] text-[#86868b]">Brasil</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </footer>
+      {/* Footer */}
+      <LandingFooter />
 
       {/* Auth Modal */}
       <AuthModal
