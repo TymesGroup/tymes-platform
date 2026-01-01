@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ModuleType, ProfileType } from '../../types';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Sidebar } from './Sidebar';
 import { MobileBottomNav } from './MobileBottomNav';
+import { TopBar } from './TopBar';
 import {
   ArrowLeft,
   Settings,
@@ -14,13 +16,14 @@ import {
   Bell,
   Shield,
   CreditCard,
-  ShoppingCart,
-  Heart,
+  ShoppingBag,
+  Bookmark,
   ListOrdered,
   Sliders,
 } from 'lucide-react';
 import { MODULE_MENUS } from '../../constants/navigation';
-import { useCart } from '../../lib/CartContext';
+import { useBag } from '../../lib/BagContext';
+import { useUnifiedBag } from '../../lib/UnifiedBagContext';
 import { useAuth } from '../../lib/AuthContext';
 import { PROFILE_TO_ACCOUNT } from '../../router/types';
 
@@ -47,17 +50,27 @@ export const Layout: React.FC<LayoutProps> = ({
 }) => {
   const { theme, toggleTheme } = useTheme();
   const [showSettings, setShowSettings] = useState(false);
-  const { items: cartItems } = useCart();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { items: bagItems } = useBag();
+  const { totalItems: unifiedBagItems } = useUnifiedBag();
   const { profile } = useAuth();
 
+  // Combined bag count
+  const totalBagCount = bagItems.length + unifiedBagItems;
+
   // Check if in a root module or sub-module
-  const isRootModule = [
-    ModuleType.DASHBOARD,
-    ModuleType.EXPLORE,
-    ModuleType.AI_AGENT,
-    ModuleType.SETTINGS,
-    ModuleType.PROFILE,
-  ].includes(activeModule as ModuleType);
+  // Global pages should be treated as root modules to keep the main menu visible
+  const GLOBAL_PAGES = ['CHECKOUT', 'ORDERS', 'SAVES', 'NOTIFICATIONS', 'BAG'];
+  const isGlobalPage = GLOBAL_PAGES.includes(activeModule as string);
+
+  const isRootModule =
+    [
+      ModuleType.DASHBOARD,
+      ModuleType.EXPLORE,
+      ModuleType.AI_AGENT,
+      ModuleType.SETTINGS,
+      ModuleType.PROFILE,
+    ].includes(activeModule as ModuleType) || isGlobalPage;
 
   // Get current module title
   const currentModuleMenu = MODULE_MENUS[activeModule as string];
@@ -70,17 +83,30 @@ export const Layout: React.FC<LayoutProps> = ({
 
   // Function to navigate to global pages
   const accountType = profile?.type === ProfileType.BUSINESS ? 'business' : 'personal';
+  const navigate = useNavigate();
 
-  const goToCart = () => {
-    window.location.hash = `/${accountType}/shop/cart`;
+  const goToBag = () => {
+    navigate(`/${accountType}/bag`);
+  };
+
+  const goToCheckout = () => {
+    navigate(`/${accountType}/checkout`);
   };
 
   const goToOrders = () => {
-    window.location.hash = `/${accountType}/orders`;
+    navigate(`/${accountType}/orders`);
   };
 
-  const goToFavorites = () => {
-    window.location.hash = `/${accountType}/favorites`;
+  const goToSaves = () => {
+    navigate(`/${accountType}/saves`);
+  };
+
+  const handleNavigateToProduct = (productId: string) => {
+    navigate(`/${accountType}/shop/product/${productId}`);
+  };
+
+  const handleNavigateToModule = (moduleId: string) => {
+    onNavigate(moduleId);
   };
 
   return (
@@ -95,6 +121,16 @@ export const Layout: React.FC<LayoutProps> = ({
         theme={theme}
         toggleTheme={toggleTheme}
         onLogout={onLogout}
+        onCollapsedChange={setSidebarCollapsed}
+      />
+
+      {/* TopBar - Desktop */}
+      <TopBar
+        onNavigateToCheckout={goToBag}
+        onNavigateToOrders={goToOrders}
+        onNavigateToSaves={goToSaves}
+        onNavigateToProduct={handleNavigateToProduct}
+        onNavigateToModule={handleNavigateToModule}
       />
 
       {/* Mobile Header */}
@@ -128,15 +164,15 @@ export const Layout: React.FC<LayoutProps> = ({
 
           {/* Right side - Quick actions + Settings */}
           <div className="flex items-center gap-1">
-            {/* Cart button with badge */}
+            {/* Bag button with badge */}
             <button
-              onClick={goToCart}
+              onClick={goToBag}
               className="p-2 rounded-lg text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors relative"
             >
-              <ShoppingCart size={20} />
-              {cartItems.length > 0 && (
+              <ShoppingBag size={20} />
+              {totalBagCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-indigo-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                  {cartItems.length > 9 ? '9+' : cartItems.length}
+                  {totalBagCount > 9 ? '9+' : totalBagCount}
                 </span>
               )}
             </button>
@@ -205,21 +241,21 @@ export const Layout: React.FC<LayoutProps> = ({
               </>
             )}
 
-            {/* Quick Actions - Carrinho, Pedidos, Favoritos */}
+            {/* Quick Actions - Bolsa, Pedidos, Salvos */}
             <p className="text-xs text-zinc-500 uppercase font-medium px-1 mb-2">Ações Rápidas</p>
 
             <button
               onClick={() => {
-                goToCart();
+                goToBag();
                 setShowSettings(false);
               }}
               className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
             >
-              <ShoppingCart size={20} />
-              <span className="flex-1 text-left">Carrinho</span>
-              {cartItems.length > 0 && (
+              <ShoppingBag size={20} />
+              <span className="flex-1 text-left">Bolsa</span>
+              {totalBagCount > 0 && (
                 <span className="px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs font-medium rounded-full">
-                  {cartItems.length}
+                  {totalBagCount}
                 </span>
               )}
             </button>
@@ -237,13 +273,13 @@ export const Layout: React.FC<LayoutProps> = ({
 
             <button
               onClick={() => {
-                goToFavorites();
+                goToSaves();
                 setShowSettings(false);
               }}
               className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
             >
-              <Heart size={20} />
-              <span className="flex-1 text-left">Favoritos</span>
+              <Bookmark size={20} />
+              <span className="flex-1 text-left">Salvos</span>
             </button>
 
             <div className="border-t border-zinc-200 dark:border-zinc-800 my-3" />
@@ -365,8 +401,8 @@ export const Layout: React.FC<LayoutProps> = ({
       />
 
       {/* Main Content - Ajustado para mobile com padding bottom para o nav */}
-      <main className="flex-1 overflow-auto pt-14 md:pt-0 pb-20 md:pb-0 relative">
-        <div className="max-w-7xl mx-auto p-4 md:p-8 min-h-full">{children}</div>
+      <main className="flex-1 overflow-auto pt-14 md:pt-[76px] pb-20 md:pb-0 md:pr-3 relative">
+        <div className="max-w-7xl mx-auto p-4 md:p-6 min-h-full">{children}</div>
       </main>
     </div>
   );

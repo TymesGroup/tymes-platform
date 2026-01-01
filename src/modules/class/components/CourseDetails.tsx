@@ -1,7 +1,13 @@
+/**
+ * CourseDetails - Página de detalhes do curso com fluxo de compra
+ * Design minimalista estilo Apple
+ */
+
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
-  Heart,
+  Bookmark,
   Play,
   Star,
   Clock,
@@ -10,8 +16,18 @@ import {
   BookOpen,
   CheckCircle,
   Share2,
+  ShoppingBag,
+  Zap,
+  ChevronLeft,
+  ChevronRight,
+  Image as ImageIcon,
+  Video,
 } from 'lucide-react';
-import { useCourse } from '../hooks/useClass';
+import { useCourse, CourseMedia } from '../hooks/useClass';
+import { useUnifiedBag } from '../../../lib/UnifiedBagContext';
+import { useFavorites } from '../../../lib/FavoritesContext';
+import { useAuth } from '../../../lib/AuthContext';
+import { ProfileType } from '../../../types';
 
 interface CourseDetailsProps {
   courseId: string;
@@ -33,10 +49,109 @@ const MOCK_MODULES = [
   { id: '5', title: 'Projeto Final', lessons: 3, duration: '1h', completed: false },
 ];
 
-export const CourseDetails: React.FC<CourseDetailsProps> = ({ courseId, onBack }) => {
+export const CourseDetails: React.FC<CourseDetailsProps> = ({ courseId, onBack, onNavigate }) => {
+  const { user, profile } = useAuth();
   const { course, loading } = useCourse(courseId);
-  const [isFavorite, setIsFavorite] = useState(false);
+  const { addItem, isInBag } = useUnifiedBag();
+  const { isFavorited, toggleFavorite } = useFavorites();
+  const navigate = useNavigate();
+
   const [activeTab, setActiveTab] = useState<'about' | 'content' | 'reviews'>('about');
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [isBuying, setIsBuying] = useState(false);
+  const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
+  const [selectedMediaIndex, setSelectedMediaIndex] = useState(0);
+  const [videoPlaying, setVideoPlaying] = useState(false);
+
+  const inBag = isInBag('course', courseId);
+  const isFavorite = isFavorited(courseId, 'course');
+  const accountType = profile?.type === ProfileType.BUSINESS ? 'business' : 'personal';
+
+  // Build media array from course data
+  const media: CourseMedia[] =
+    course?.media && course.media.length > 0
+      ? course.media
+      : course?.thumbnail
+        ? [
+            {
+              id: '1',
+              url: course.thumbnail,
+              type: 'image' as const,
+              position: 0,
+              is_primary: true,
+            },
+          ]
+        : [];
+
+  const navigateMedia = (direction: 'prev' | 'next') => {
+    if (direction === 'prev') {
+      setSelectedMediaIndex(i => (i === 0 ? media.length - 1 : i - 1));
+    } else {
+      setSelectedMediaIndex(i => (i === media.length - 1 ? 0 : i + 1));
+    }
+    setVideoPlaying(false);
+  };
+
+  const handleToggleFavorite = async () => {
+    if (!user) {
+      alert('Faça login para favoritar');
+      return;
+    }
+
+    setIsTogglingFavorite(true);
+    try {
+      await toggleFavorite(courseId, 'course');
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    } finally {
+      setIsTogglingFavorite(false);
+    }
+  };
+
+  const [addedToCart, setAddedToCart] = useState(false);
+
+  // Adicionar à Bolsa - NÃO redireciona, apenas adiciona
+  const handleAddToCart = async () => {
+    if (!user) {
+      alert('Faça login para adicionar à bolsa');
+      return;
+    }
+
+    setIsAddingToCart(true);
+    try {
+      await addItem('course', courseId);
+      setAddedToCart(true);
+      // Feedback visual temporário
+      setTimeout(() => setAddedToCart(false), 2000);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Erro ao adicionar à bolsa');
+    } finally {
+      setIsAddingToCart(false);
+    }
+  };
+
+  const handleBuyNow = async () => {
+    if (!user) {
+      alert('Faça login para comprar');
+      return;
+    }
+
+    setIsBuying(true);
+    try {
+      if (!inBag) {
+        await addItem('course', courseId);
+      }
+      // Navigate to checkout
+      navigate(`/${accountType}/checkout`);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Erro ao processar compra');
+    } finally {
+      setIsBuying(false);
+    }
+  };
+
+  const formatPrice = (price: number) =>
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price);
 
   if (loading) {
     return (
@@ -58,11 +173,14 @@ export const CourseDetails: React.FC<CourseDetailsProps> = ({ courseId, onBack }
   }
 
   const defaultImage = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800';
-  const mockPrice = 199.9;
-  const mockOriginalPrice = 299.9;
-  const mockRating = 4.8;
-  const mockStudents = 12500;
-  const mockDuration = '42h';
+  const price = course.price || 199.9;
+  const originalPrice = course.original_price || 299.9;
+  const rating = course.rating || 4.8;
+  const studentsCount = course.students_count || 12500;
+  const duration = course.duration || '42h';
+  const totalReviews = course.total_reviews || 256;
+  const discount = originalPrice > price ? Math.round((1 - price / originalPrice) * 100) : 0;
+  const currentMedia = media[selectedMediaIndex];
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -76,33 +194,120 @@ export const CourseDetails: React.FC<CourseDetailsProps> = ({ courseId, onBack }
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Video/Image Preview */}
-          <div className="aspect-video rounded-2xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 relative group cursor-pointer">
-            <img
-              src={course.thumbnail || defaultImage}
-              alt={course.title}
-              className="w-full h-full object-cover"
-              onError={e => {
-                e.currentTarget.src = defaultImage;
-              }}
-            />
-            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-xl">
-                <Play size={32} className="text-purple-600 ml-1" fill="currentColor" />
+          {/* Video/Image Preview with Gallery */}
+          <div className="aspect-video rounded-2xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 relative group">
+            {currentMedia?.type === 'video' ? (
+              <div className="relative w-full h-full">
+                <video
+                  src={currentMedia.url}
+                  className="w-full h-full object-cover"
+                  controls={videoPlaying}
+                  autoPlay={videoPlaying}
+                  onClick={() => setVideoPlaying(!videoPlaying)}
+                />
+                {!videoPlaying && (
+                  <button
+                    onClick={() => setVideoPlaying(true)}
+                    className="absolute inset-0 flex items-center justify-center bg-black/30"
+                  >
+                    <div className="w-20 h-20 rounded-full bg-white/90 flex items-center justify-center shadow-xl">
+                      <Play size={32} className="text-purple-600 ml-1" fill="currentColor" />
+                    </div>
+                  </button>
+                )}
               </div>
-            </div>
+            ) : (
+              <>
+                <img
+                  src={currentMedia?.url || course.thumbnail || defaultImage}
+                  alt={course.title}
+                  className="w-full h-full object-cover"
+                  onError={e => {
+                    e.currentTarget.src = defaultImage;
+                  }}
+                />
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                  <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-xl">
+                    <Play size={32} className="text-purple-600 ml-1" fill="currentColor" />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Navigation Arrows */}
+            {media.length > 1 && (
+              <>
+                <button
+                  onClick={() => navigateMedia('prev')}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/90 dark:bg-zinc-900/90 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <ChevronLeft size={24} />
+                </button>
+                <button
+                  onClick={() => navigateMedia('next')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/90 dark:bg-zinc-900/90 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <ChevronRight size={24} />
+                </button>
+              </>
+            )}
+
             <div className="absolute top-4 right-4 flex gap-2">
               <button
-                onClick={() => setIsFavorite(!isFavorite)}
-                className={`p-3 rounded-full transition-colors ${isFavorite ? 'bg-rose-500 text-white' : 'bg-white/90 text-zinc-600 hover:bg-white'}`}
+                onClick={e => {
+                  e.stopPropagation();
+                  handleToggleFavorite();
+                }}
+                disabled={isTogglingFavorite}
+                className={`p-3 rounded-full transition-colors ${isFavorite ? 'bg-rose-500 text-white' : 'bg-white/90 text-zinc-600 hover:bg-white'} disabled:opacity-50`}
               >
-                <Heart size={20} className={isFavorite ? 'fill-white' : ''} />
+                <Bookmark size={20} className={isFavorite ? 'fill-white' : ''} />
               </button>
               <button className="p-3 rounded-full bg-white/90 text-zinc-600 hover:bg-white transition-colors">
                 <Share2 size={20} />
               </button>
             </div>
+            {course.is_bestseller && (
+              <div className="absolute top-4 left-4 bg-amber-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg">
+                Bestseller
+              </div>
+            )}
+
+            {/* Media Counter */}
+            {media.length > 1 && (
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-black/60 text-white text-sm">
+                {selectedMediaIndex + 1} / {media.length}
+              </div>
+            )}
           </div>
+
+          {/* Thumbnails */}
+          {media.length > 1 && (
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {media.map((m, index) => (
+                <button
+                  key={m.id}
+                  onClick={() => {
+                    setSelectedMediaIndex(index);
+                    setVideoPlaying(false);
+                  }}
+                  className={`relative flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
+                    index === selectedMediaIndex
+                      ? 'border-purple-600 ring-2 ring-purple-600/20'
+                      : 'border-transparent hover:border-zinc-300'
+                  }`}
+                >
+                  {m.type === 'video' ? (
+                    <div className="w-full h-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center">
+                      <Play size={20} className="text-zinc-500" />
+                    </div>
+                  ) : (
+                    <img src={m.url} alt="" className="w-full h-full object-cover" />
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Course Info */}
           <div>
@@ -110,9 +315,11 @@ export const CourseDetails: React.FC<CourseDetailsProps> = ({ courseId, onBack }
               <span className="text-xs text-purple-500 uppercase font-bold tracking-wider bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded-full">
                 {course.category || 'Tecnologia'}
               </span>
-              <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full font-medium">
-                Bestseller
-              </span>
+              {course.level && (
+                <span className="text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 px-2 py-1 rounded-full">
+                  {course.level}
+                </span>
+              )}
             </div>
             <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">{course.title}</h1>
             <p className="text-zinc-600 dark:text-zinc-400 mt-2">
@@ -124,18 +331,16 @@ export const CourseDetails: React.FC<CourseDetailsProps> = ({ courseId, onBack }
             <div className="flex flex-wrap items-center gap-4 mt-4">
               <div className="flex items-center gap-1 text-amber-500">
                 <Star size={18} fill="currentColor" />
-                <span className="font-bold">{mockRating}</span>
-                <span className="text-zinc-500 text-sm">
-                  ({course.total_reviews || 256} avaliações)
-                </span>
+                <span className="font-bold">{rating}</span>
+                <span className="text-zinc-500 text-sm">({totalReviews} avaliações)</span>
               </div>
               <div className="flex items-center gap-1 text-zinc-500">
                 <Users size={18} />
-                <span>{mockStudents.toLocaleString()} alunos</span>
+                <span>{studentsCount.toLocaleString()} alunos</span>
               </div>
               <div className="flex items-center gap-1 text-zinc-500">
                 <Clock size={18} />
-                <span>{mockDuration} de conteúdo</span>
+                <span>{duration} de conteúdo</span>
               </div>
             </div>
 
@@ -149,10 +354,16 @@ export const CourseDetails: React.FC<CourseDetailsProps> = ({ courseId, onBack }
                 alt={course.instructor}
                 className="w-14 h-14 rounded-full object-cover"
               />
-              <div>
+              <div className="flex-1">
                 <p className="text-sm text-zinc-500">Instrutor</p>
                 <p className="font-bold text-lg">{course.instructor}</p>
               </div>
+              <button
+                onClick={() => onNavigate?.(`INSTRUCTOR:${course.created_by}`)}
+                className="px-4 py-2 border border-purple-600 text-purple-600 rounded-lg font-medium hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors text-sm"
+              >
+                Ver Perfil
+              </button>
             </div>
           </div>
 
@@ -207,7 +418,7 @@ export const CourseDetails: React.FC<CourseDetailsProps> = ({ courseId, onBack }
             <div className="space-y-3">
               <div className="flex items-center justify-between text-sm text-zinc-500 mb-4">
                 <span>{MOCK_MODULES.length} módulos • 38 aulas</span>
-                <span>{mockDuration} de duração total</span>
+                <span>{duration} de duração total</span>
               </div>
               {MOCK_MODULES.map((module, idx) => (
                 <div
@@ -239,23 +450,21 @@ export const CourseDetails: React.FC<CourseDetailsProps> = ({ courseId, onBack }
             <div className="space-y-4">
               <div className="flex items-center gap-4 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl">
                 <div className="text-center">
-                  <p className="text-4xl font-bold text-purple-600">{mockRating}</p>
+                  <p className="text-4xl font-bold text-purple-600">{rating}</p>
                   <div className="flex items-center justify-center mt-1">
                     {[1, 2, 3, 4, 5].map(s => (
                       <Star
                         key={s}
                         size={14}
                         className={
-                          s <= Math.round(mockRating)
+                          s <= Math.round(rating)
                             ? 'text-amber-400 fill-amber-400'
                             : 'text-zinc-300'
                         }
                       />
                     ))}
                   </div>
-                  <p className="text-sm text-zinc-500 mt-1">
-                    {course.total_reviews || 256} avaliações
-                  </p>
+                  <p className="text-sm text-zinc-500 mt-1">{totalReviews} avaliações</p>
                 </div>
               </div>
               <p className="text-zinc-500 text-center py-8">
@@ -270,24 +479,62 @@ export const CourseDetails: React.FC<CourseDetailsProps> = ({ courseId, onBack }
           <div className="sticky top-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 space-y-4">
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-3xl font-bold text-purple-600">
-                  R$ {mockPrice.toFixed(2).replace('.', ',')}
-                </span>
-                <span className="text-lg text-zinc-400 line-through">
-                  R$ {mockOriginalPrice.toFixed(2).replace('.', ',')}
-                </span>
+                <span className="text-3xl font-bold text-purple-600">{formatPrice(price)}</span>
+                {discount > 0 && (
+                  <span className="text-lg text-zinc-400 line-through">
+                    {formatPrice(originalPrice)}
+                  </span>
+                )}
               </div>
-              <span className="text-sm text-emerald-600 font-medium">
-                {Math.round((1 - mockPrice / mockOriginalPrice) * 100)}% de desconto
-              </span>
+              {discount > 0 && (
+                <span className="text-sm text-emerald-600 font-medium">
+                  {discount}% de desconto
+                </span>
+              )}
             </div>
 
-            <button className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-4 rounded-xl font-bold hover:from-purple-700 hover:to-indigo-700 transition-all shadow-lg shadow-purple-500/25">
-              Comprar Agora
+            <button
+              onClick={handleBuyNow}
+              disabled={isBuying}
+              className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-4 rounded-xl font-bold hover:from-purple-700 hover:to-indigo-700 transition-all shadow-lg shadow-purple-500/25 flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {isBuying ? (
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
+              ) : (
+                <>
+                  <Zap size={18} />
+                  Comprar Agora
+                </>
+              )}
             </button>
 
-            <button className="w-full border border-purple-600 text-purple-600 py-3 rounded-xl font-medium hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors">
-              Adicionar ao Carrinho
+            <button
+              onClick={handleAddToCart}
+              disabled={isAddingToCart || inBag}
+              className={`w-full py-3 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 ${
+                addedToCart || inBag
+                  ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 border border-emerald-200 dark:border-emerald-800'
+                  : 'border border-purple-600 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20'
+              }`}
+            >
+              {isAddingToCart ? (
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-600" />
+              ) : addedToCart ? (
+                <>
+                  <CheckCircle size={18} />
+                  Adicionado!
+                </>
+              ) : inBag ? (
+                <>
+                  <CheckCircle size={18} />
+                  Na Bolsa
+                </>
+              ) : (
+                <>
+                  <ShoppingBag size={18} />
+                  Adicionar à Bolsa
+                </>
+              )}
             </button>
 
             <p className="text-xs text-zinc-500 text-center">
@@ -298,7 +545,7 @@ export const CourseDetails: React.FC<CourseDetailsProps> = ({ courseId, onBack }
               <h4 className="font-medium">Este curso inclui:</h4>
               <div className="space-y-2 text-sm text-zinc-600 dark:text-zinc-400">
                 <div className="flex items-center gap-2">
-                  <Clock size={16} /> {mockDuration} de vídeo sob demanda
+                  <Clock size={16} /> {duration} de vídeo sob demanda
                 </div>
                 <div className="flex items-center gap-2">
                   <BookOpen size={16} /> 38 aulas

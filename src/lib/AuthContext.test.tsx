@@ -13,6 +13,9 @@ const mockOnAuthStateChange = vi.fn();
 const mockRefreshSession = vi.fn();
 const mockFrom = vi.fn();
 
+// Mock functions
+const mockHasStoredSession = vi.fn();
+
 vi.mock('./supabase', () => ({
   supabase: {
     auth: {
@@ -32,6 +35,11 @@ vi.mock('./supabase', () => ({
   analyticsStorage: {
     trackEvent: vi.fn(),
   },
+  clearAllAppData: vi.fn(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  }),
+  hasStoredSession: () => mockHasStoredSession(),
 }));
 
 // Mock preloadData
@@ -71,6 +79,7 @@ describe('AuthContext Integration', () => {
     sessionStorage.clear();
 
     // Default mock implementations
+    mockHasStoredSession.mockReturnValue(false);
     mockGetSession.mockResolvedValue({ data: { session: null }, error: null });
     mockOnAuthStateChange.mockReturnValue({
       data: { subscription: { unsubscribe: vi.fn() } },
@@ -83,17 +92,16 @@ describe('AuthContext Integration', () => {
   });
 
   describe('Initial State', () => {
-    it('should start with loading state and no user', async () => {
+    it('should start with no user when no stored session', async () => {
+      mockHasStoredSession.mockReturnValue(false);
+
       render(
         <AuthProvider>
           <TestComponent />
         </AuthProvider>
       );
 
-      // Initially loading
-      expect(screen.getByTestId('loading')).toHaveTextContent('loading');
-
-      // After initialization
+      // Should quickly become ready with no user
       await waitFor(() => {
         expect(screen.getByTestId('loading')).toHaveTextContent('ready');
       });
@@ -101,6 +109,8 @@ describe('AuthContext Integration', () => {
     });
 
     it('should restore session from existing auth', async () => {
+      mockHasStoredSession.mockReturnValue(true);
+
       const mockSession = {
         user: { id: 'user-123', email: 'test@example.com' },
         access_token: 'token-123',

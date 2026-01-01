@@ -1,6 +1,6 @@
 import React from 'react';
-import { ShoppingCart, Plus } from 'lucide-react';
-import { useCart } from '../../lib/CartContext';
+import { ShoppingBag, Plus } from 'lucide-react';
+import { useBag } from '../../lib/BagContext';
 import { useAuth } from '../../lib/AuthContext';
 
 interface CartButtonProps {
@@ -17,9 +17,9 @@ export const CartButton: React.FC<CartButtonProps> = ({
   className = '',
 }) => {
   const { user } = useAuth();
-  const { addItem, items, loading } = useCart();
+  const { addItem, items, loading } = useBag();
 
-  const isInCart = items.some(item => item.product_id === productId);
+  const isInBag = items.some(item => item.product_id === productId);
 
   const sizeClasses = {
     sm: variant === 'icon' ? 'w-7 h-7' : 'px-3 py-1.5 text-xs',
@@ -46,11 +46,11 @@ export const CartButton: React.FC<CartButtonProps> = ({
     return (
       <button
         onClick={handleClick}
-        disabled={loading || isInCart}
+        disabled={loading || isInBag}
         className={`
           ${sizeClasses[size]}
           ${
-            isInCart
+            isInBag
               ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
               : 'bg-indigo-600 hover:bg-indigo-700 text-white'
           }
@@ -61,10 +61,10 @@ export const CartButton: React.FC<CartButtonProps> = ({
           ${className}
         `}
       >
-        {isInCart ? (
+        {isInBag ? (
           <>
-            <ShoppingCart size={iconSizes[size]} />
-            No carrinho
+            <ShoppingBag size={iconSizes[size]} />
+            Na bolsa
           </>
         ) : (
           <>
@@ -79,11 +79,11 @@ export const CartButton: React.FC<CartButtonProps> = ({
   return (
     <button
       onClick={handleClick}
-      disabled={loading || isInCart}
+      disabled={loading || isInBag}
       className={`
         ${sizeClasses[size]}
         ${
-          isInCart
+          isInBag
             ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
             : 'bg-indigo-600 hover:bg-indigo-700 text-white'
         }
@@ -94,9 +94,9 @@ export const CartButton: React.FC<CartButtonProps> = ({
         shadow-sm
         ${className}
       `}
-      title={isInCart ? 'Já no carrinho' : 'Adicionar ao carrinho'}
+      title={isInBag ? 'Já na bolsa' : 'Adicionar à bolsa'}
     >
-      {isInCart ? <ShoppingCart size={iconSizes[size]} /> : <Plus size={iconSizes[size]} />}
+      {isInBag ? <ShoppingBag size={iconSizes[size]} /> : <Plus size={iconSizes[size]} />}
     </button>
   );
 };

@@ -178,11 +178,11 @@ export const SHOP_ROUTES: RouteDefinition[] = [
     requiresSubscription: true,
   },
   {
-    path: '/:account/shop/cart',
+    path: '/:account/shop/bag',
     allowedAccounts: SHARED_ACCOUNTS,
     module: 'shop',
-    feature: 'cart',
-    description: 'Carrinho de compras',
+    feature: 'bag',
+    description: 'Bolsa de compras',
     requiresSubscription: true,
   },
   {
@@ -212,11 +212,11 @@ export const SHOP_ROUTES: RouteDefinition[] = [
     requiresSubscription: true,
   },
   {
-    path: '/:account/shop/favorites',
+    path: '/:account/shop/saves',
     allowedAccounts: SHARED_ACCOUNTS,
     module: 'shop',
-    feature: 'favorites',
-    description: 'Produtos favoritos',
+    feature: 'saves',
+    description: 'Produtos salvos',
     requiresSubscription: true,
   },
   {

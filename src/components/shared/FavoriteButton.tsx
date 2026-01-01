@@ -1,5 +1,5 @@
 import React from 'react';
-import { Heart } from 'lucide-react';
+import { Bookmark } from 'lucide-react';
 import { useFavorites } from '../../lib/FavoritesContext';
 import { useAuth } from '../../lib/AuthContext';
 
@@ -55,12 +55,12 @@ export const FavoriteButton: React.FC<FavoriteButtonProps> = ({
         disabled:opacity-50 disabled:cursor-not-allowed
         ${className}
       `}
-      title={isFav ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+      title={isFav ? 'Remover dos salvos' : 'Salvar'}
     >
-      <Heart
+      <Bookmark
         size={iconSizes[size]}
         className={`transition-colors duration-200 ${
-          isFav ? 'fill-red-500 text-red-500' : 'text-zinc-400 hover:text-red-400'
+          isFav ? 'fill-indigo-500 text-indigo-500' : 'text-zinc-400 hover:text-indigo-400'
         }`}
       />
     </button>

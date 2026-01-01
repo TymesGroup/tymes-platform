@@ -63,10 +63,44 @@ class DataCache {
     global: 5 * 60 * 1000, // 5 minutes - default for global data
   };
 
+  // Storage key for persisting cache metadata
+  private readonly CACHE_VERSION_KEY = 'tymes_cache_version';
+  private readonly CACHE_VERSION = '2'; // Increment to invalidate all caches
+
   constructor() {
     // Initialize module key sets
     const modules: CacheModule[] = ['shop', 'class', 'social', 'work', 'ai', 'user', 'global'];
     modules.forEach(module => this.moduleKeyMap.set(module, new Set()));
+
+    // Check cache version and clear if outdated
+    this.checkCacheVersion();
+
+    // Listen for visibility changes to prune expired entries
+    if (typeof window !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          this.pruneExpired();
+        }
+      });
+
+      // Prune expired entries periodically (every 2 minutes)
+      setInterval(() => this.pruneExpired(), 2 * 60 * 1000);
+    }
+  }
+
+  /**
+   * Check cache version and clear if outdated
+   */
+  private checkCacheVersion(): void {
+    try {
+      const storedVersion = localStorage.getItem(this.CACHE_VERSION_KEY);
+      if (storedVersion !== this.CACHE_VERSION) {
+        this.clear();
+        localStorage.setItem(this.CACHE_VERSION_KEY, this.CACHE_VERSION);
+      }
+    } catch {
+      // Ignore storage errors
+    }
   }
 
   /**

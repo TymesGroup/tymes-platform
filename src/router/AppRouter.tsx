@@ -6,7 +6,7 @@
  */
 
 import React, { Suspense, lazy } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth, Profile } from '../lib/AuthContext';
 import { ProfileType } from '../types';
 import { PROFILE_TO_ACCOUNT } from './types';
@@ -16,7 +16,6 @@ import { AuthGuard, GuestGuard, AccountGuard, AdminOnlyGuard } from './guards';
 
 // Layouts
 import { Layout } from '../components/layout';
-import { GlobalHeader } from '../components/layout/GlobalHeader';
 
 // Lazy loaded modules for better performance
 const Landing = lazy(() => import('../modules/landing').then(m => ({ default: m.Landing })));
@@ -51,7 +50,21 @@ const SuperAdminModule = lazy(() =>
 );
 
 // Global Pages
-import { CheckoutPage, OrdersPage, FavoritesPage } from '../modules/global';
+import { CheckoutPage, OrdersPage, SavesPage, NotificationsPage, BagPage } from '../modules/global';
+
+// Public Pages
+const AboutPage = lazy(() => import('../modules/public/pages/AboutPage'));
+const BlogPage = lazy(() => import('../modules/public/pages/BlogPage'));
+const CareersPage = lazy(() => import('../modules/public/pages/CareersPage'));
+const PressPage = lazy(() => import('../modules/public/pages/PressPage'));
+const HelpCenterPage = lazy(() => import('../modules/public/pages/HelpCenterPage'));
+const DocumentationPage = lazy(() => import('../modules/public/pages/DocumentationPage'));
+const ApiPage = lazy(() => import('../modules/public/pages/ApiPage'));
+const StatusPage = lazy(() => import('../modules/public/pages/StatusPage'));
+const TermsPage = lazy(() => import('../modules/public/pages/TermsPage'));
+const PrivacyPage = lazy(() => import('../modules/public/pages/PrivacyPage'));
+const CookiesPage = lazy(() => import('../modules/public/pages/CookiesPage'));
+const LgpdPage = lazy(() => import('../modules/public/pages/LgpdPage'));
 
 /**
  * Loading fallback component
@@ -107,8 +120,9 @@ function moduleToSlug(module: string): string {
     SOCIAL: 'social',
     CHECKOUT: 'checkout',
     ORDERS: 'orders',
-    FAVORITES: 'favorites',
-    CART: 'cart',
+    SAVES: 'saves',
+    NOTIFICATIONS: 'notifications',
+    BAG: 'bag',
   };
   return mapping[module.toUpperCase()] || module.toLowerCase();
 }
@@ -129,8 +143,9 @@ function slugToModule(slug: string): string {
     social: 'SOCIAL',
     checkout: 'CHECKOUT',
     orders: 'ORDERS',
-    favorites: 'FAVORITES',
-    cart: 'CART',
+    saves: 'SAVES',
+    notifications: 'NOTIFICATIONS',
+    bag: 'BAG',
   };
   return mapping[slug.toLowerCase()] || slug.toUpperCase();
 }
@@ -161,11 +176,11 @@ const AuthenticatedLayout: React.FC<AuthLayoutProps> = ({ children }) => {
     if (isAdmin) {
       // For admin, navigate to admin panel pages
       const slug = mod.toLowerCase().replace('_', '-');
-      window.location.hash = `/admin/${slug}`;
+      window.location.href = `/admin/${slug}`;
     } else {
       // Convert module name to URL slug
       const slug = moduleToSlug(mod);
-      window.location.hash = `/${accountType}/${slug}`;
+      window.location.href = `/${accountType}/${slug}`;
     }
   };
 
@@ -173,42 +188,29 @@ const AuthenticatedLayout: React.FC<AuthLayoutProps> = ({ children }) => {
     if (isAdmin) {
       // For admin, the page is the second level of the route
       const slug = page.toLowerCase().replace('_', '-');
-      window.location.hash = `/admin/${slug}`;
+      window.location.href = `/admin/${slug}`;
     } else {
-      window.location.hash = `/${accountType}/${module}/${page.toLowerCase()}`;
+      window.location.href = `/${accountType}/${module}/${page.toLowerCase()}`;
     }
   };
 
   const handleLogout = async () => {
     await signOut();
-    window.location.hash = '/';
+    window.location.href = '/';
   };
 
   return (
-    <>
-      <GlobalHeader
-        onNavigateToCheckout={() => {
-          window.location.hash = `/${accountType}/checkout`;
-        }}
-        onNavigateToOrders={() => {
-          window.location.hash = `/${accountType}/orders`;
-        }}
-        onNavigateToFavorites={() => {
-          window.location.hash = `/${accountType}/favorites`;
-        }}
-      />
-      <Layout
-        activeProfile={profileType}
-        activeModule={activeModule}
-        activePage={activePage}
-        onNavigate={handleNavigate}
-        onPageChange={handlePageChange}
-        onChangeProfile={() => {}}
-        onLogout={handleLogout}
-      >
-        {children}
-      </Layout>
-    </>
+    <Layout
+      activeProfile={profileType}
+      activeModule={activeModule}
+      activePage={activePage}
+      onNavigate={handleNavigate}
+      onPageChange={handlePageChange}
+      onChangeProfile={() => {}}
+      onLogout={handleLogout}
+    >
+      {children}
+    </Layout>
   );
 };
 
@@ -226,15 +228,32 @@ const ModulePage: React.FC<ModulePageProps> = ({ module }) => {
   if (!profile) return null;
 
   const profileType = profile.type as ProfileType;
-  const { feature } = parsePathInfo(location.pathname);
-  const page = feature.toUpperCase();
+  const { feature, id } = parsePathInfo(location.pathname);
+
+  // Handle special pages with IDs (e.g., product_details, course_details, service_details)
+  let page = feature.toUpperCase();
+  let itemId = id;
+
+  // If the feature contains an ID pattern like "product_details:123", extract it
+  if (feature.includes(':')) {
+    const [pagePart, idPart] = feature.split(':');
+    page = pagePart.toUpperCase();
+    itemId = idPart;
+  }
 
   const handleNavigate = (newPage: string) => {
     const accountType = PROFILE_TO_ACCOUNT[profileType];
-    window.location.hash = `/${accountType}/${module}/${newPage.toLowerCase()}`;
+
+    // Handle navigation with IDs (e.g., PRODUCT_DETAILS:123)
+    if (newPage.includes(':')) {
+      const [pagePart, idPart] = newPage.split(':');
+      window.location.href = `/${accountType}/${module}/${pagePart.toLowerCase()}/${idPart}`;
+    } else {
+      window.location.href = `/${accountType}/${module}/${newPage.toLowerCase()}`;
+    }
   };
 
-  const props = { page, profile: profileType, onNavigate: handleNavigate };
+  const props = { page, profile: profileType, onNavigate: handleNavigate, itemId };
 
   switch (module) {
     case 'shop':
@@ -266,7 +285,7 @@ const AdminPage: React.FC = () => {
   const handleNavigate = (newPage: string) => {
     // Convert page ID to slug (e.g., SYSTEM_SETTINGS -> system-settings)
     const slug = newPage.toLowerCase().replace(/_/g, '-');
-    window.location.hash = `/admin/${slug}`;
+    window.location.href = `/admin/${slug}`;
   };
 
   return (
@@ -278,48 +297,187 @@ const AdminPage: React.FC = () => {
  * Global page wrappers
  */
 const GlobalCheckoutPage: React.FC = () => {
-  const { profile } = useAuth();
-  if (!profile) return null;
+  const { profile, loading } = useAuth();
+  const navigate = useNavigate();
+
+  // Show loading state while profile is being fetched
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-zinc-500">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-zinc-500">Faça login para continuar</p>
+        </div>
+      </div>
+    );
+  }
+
   const accountType = PROFILE_TO_ACCOUNT[profile.type as ProfileType];
 
   return (
     <CheckoutPage
       onBack={() => {
-        window.location.hash = `/${accountType}/dashboard`;
+        navigate(`/${accountType}/bag`);
       }}
       onSuccess={() => {
-        window.location.hash = `/${accountType}/orders`;
+        navigate(`/${accountType}/orders`);
       }}
     />
   );
 };
 
 const GlobalOrdersPage: React.FC = () => {
-  const { profile } = useAuth();
-  if (!profile) return null;
+  const { profile, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-zinc-500">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-zinc-500">Faça login para continuar</p>
+        </div>
+      </div>
+    );
+  }
+
   const accountType = PROFILE_TO_ACCOUNT[profile.type as ProfileType];
 
   return (
     <OrdersPage
       onBack={() => {
-        window.location.hash = `/${accountType}/dashboard`;
+        window.location.href = `/${accountType}/dashboard`;
       }}
     />
   );
 };
 
-const GlobalFavoritesPage: React.FC = () => {
-  const { profile } = useAuth();
-  if (!profile) return null;
+const GlobalSavesPage: React.FC = () => {
+  const { profile, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-zinc-500">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-zinc-500">Faça login para continuar</p>
+        </div>
+      </div>
+    );
+  }
+
   const accountType = PROFILE_TO_ACCOUNT[profile.type as ProfileType];
 
   return (
-    <FavoritesPage
+    <SavesPage
       onBack={() => {
-        window.location.hash = `/${accountType}/dashboard`;
+        window.location.href = `/${accountType}/dashboard`;
       }}
       onViewProduct={(productId, moduleType) => {
-        window.location.hash = `/${accountType}/shop/product/${productId}`;
+        window.location.href = `/${accountType}/shop/product/${productId}`;
+      }}
+    />
+  );
+};
+
+const GlobalNotificationsPage: React.FC = () => {
+  const { profile, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-zinc-500">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-zinc-500">Faça login para continuar</p>
+        </div>
+      </div>
+    );
+  }
+
+  const accountType = PROFILE_TO_ACCOUNT[profile.type as ProfileType];
+
+  return (
+    <NotificationsPage
+      onBack={() => {
+        window.location.href = `/${accountType}/dashboard`;
+      }}
+    />
+  );
+};
+
+const GlobalBagPage: React.FC = () => {
+  const { profile, loading } = useAuth();
+  const navigate = useNavigate();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-zinc-500">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-zinc-500">Faça login para continuar</p>
+        </div>
+      </div>
+    );
+  }
+
+  const accountType = PROFILE_TO_ACCOUNT[profile.type as ProfileType];
+
+  return (
+    <BagPage
+      onBack={() => {
+        navigate(`/${accountType}/explore`);
+      }}
+      onCheckout={() => {
+        navigate(`/${accountType}/checkout`);
       }}
     />
   );
@@ -338,7 +496,7 @@ const SharedRoutes: React.FC<SharedRoutesProps> = ({ profile, profileType }) => 
   const accountType = PROFILE_TO_ACCOUNT[profileType];
 
   const handleOpenModule = (mod: string) => {
-    window.location.hash = `/${accountType}/${mod.toLowerCase()}`;
+    window.location.href = `/${accountType}/${mod.toLowerCase()}`;
   };
 
   return (
@@ -359,8 +517,9 @@ const SharedRoutes: React.FC<SharedRoutesProps> = ({ profile, profileType }) => 
         {/* Global Pages - accessible from any module */}
         <Route path="checkout" element={<GlobalCheckoutPage />} />
         <Route path="orders" element={<GlobalOrdersPage />} />
-        <Route path="favorites" element={<GlobalFavoritesPage />} />
-        <Route path="cart" element={<GlobalCheckoutPage />} />
+        <Route path="saves" element={<GlobalSavesPage />} />
+        <Route path="notifications" element={<GlobalNotificationsPage />} />
+        <Route path="bag" element={<GlobalBagPage />} />
 
         {/* Module Routes */}
         <Route path="shop" element={<ModulePage module="shop" />} />
@@ -448,7 +607,7 @@ export const AppRouter: React.FC = () => {
             <GuestGuard>
               <Landing
                 onEnter={() => {
-                  window.location.hash = '/auth/login';
+                  window.location.href = '/auth/login';
                 }}
               />
             </GuestGuard>
@@ -462,7 +621,7 @@ export const AppRouter: React.FC = () => {
               <Auth
                 onLogin={() => {}}
                 onBack={() => {
-                  window.location.hash = '/';
+                  window.location.href = '/';
                 }}
                 signIn={signIn}
                 signUp={signUp}
@@ -477,7 +636,7 @@ export const AppRouter: React.FC = () => {
               <Auth
                 onLogin={() => {}}
                 onBack={() => {
-                  window.location.hash = '/';
+                  window.location.href = '/';
                 }}
                 signIn={signIn}
                 signUp={signUp}
@@ -492,7 +651,7 @@ export const AppRouter: React.FC = () => {
               <Auth
                 onLogin={() => {}}
                 onBack={() => {
-                  window.location.hash = '/';
+                  window.location.href = '/';
                 }}
                 signIn={signIn}
                 signUp={signUp}
@@ -507,6 +666,24 @@ export const AppRouter: React.FC = () => {
         <Route path="/class" element={<ModuleLanding module="class" />} />
         <Route path="/work" element={<ModuleLanding module="work" />} />
         <Route path="/social" element={<ModuleLanding module="social" />} />
+
+        {/* Public Pages - Empresa */}
+        <Route path="/sobre" element={<AboutPage />} />
+        <Route path="/blog" element={<BlogPage />} />
+        <Route path="/carreiras" element={<CareersPage />} />
+        <Route path="/imprensa" element={<PressPage />} />
+
+        {/* Public Pages - Suporte */}
+        <Route path="/ajuda" element={<HelpCenterPage />} />
+        <Route path="/documentacao" element={<DocumentationPage />} />
+        <Route path="/api" element={<ApiPage />} />
+        <Route path="/status" element={<StatusPage />} />
+
+        {/* Public Pages - Legal */}
+        <Route path="/termos" element={<TermsPage />} />
+        <Route path="/privacidade" element={<PrivacyPage />} />
+        <Route path="/cookies" element={<CookiesPage />} />
+        <Route path="/lgpd" element={<LgpdPage />} />
 
         {/* Onboarding */}
         <Route

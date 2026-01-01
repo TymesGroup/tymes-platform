@@ -31,10 +31,10 @@ export function buildUrl(
 }
 
 /**
- * Navigates to a URL using hash router
+ * Navigates to a URL using browser router
  */
 export function navigateTo(url: string): void {
-  window.location.hash = url;
+  window.location.href = url;
 }
 
 /**
@@ -82,8 +82,8 @@ export function navigateToDetail(
  * Gets the account type from the current URL
  */
 export function getAccountTypeFromUrl(): AccountType | null {
-  const hash = window.location.hash.replace('#', '');
-  const parts = hash.split('/').filter(Boolean);
+  const pathname = window.location.pathname;
+  const parts = pathname.split('/').filter(Boolean);
 
   if (parts.length > 0) {
     const account = parts[0] as AccountType;
@@ -99,8 +99,8 @@ export function getAccountTypeFromUrl(): AccountType | null {
  * Gets the current module from URL
  */
 export function getModuleFromUrl(): string | null {
-  const hash = window.location.hash.replace('#', '');
-  const parts = hash.split('/').filter(Boolean);
+  const pathname = window.location.pathname;
+  const parts = pathname.split('/').filter(Boolean);
 
   if (parts.length > 1) {
     return parts[1];
@@ -113,8 +113,8 @@ export function getModuleFromUrl(): string | null {
  * Gets the current feature from URL
  */
 export function getFeatureFromUrl(): string | null {
-  const hash = window.location.hash.replace('#', '');
-  const parts = hash.split('/').filter(Boolean);
+  const pathname = window.location.pathname;
+  const parts = pathname.split('/').filter(Boolean);
 
   if (parts.length > 2) {
     return parts[2];
@@ -127,11 +127,11 @@ export function getFeatureFromUrl(): string | null {
  * Checks if the current URL matches a pattern
  */
 export function matchesRoute(pattern: string): boolean {
-  const hash = window.location.hash.replace('#', '');
+  const pathname = window.location.pathname;
   const patternParts = pattern.split('/').filter(Boolean);
-  const hashParts = hash.split('/').filter(Boolean);
+  const pathParts = pathname.split('/').filter(Boolean);
 
-  if (patternParts.length !== hashParts.length) {
+  if (patternParts.length !== pathParts.length) {
     return false;
   }
 
@@ -139,6 +139,6 @@ export function matchesRoute(pattern: string): boolean {
     if (part.startsWith(':')) {
       return true; // Dynamic parameter
     }
-    return part === hashParts[index];
+    return part === pathParts[index];
   });
 }

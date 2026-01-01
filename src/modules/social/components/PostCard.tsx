@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import type { PostWithDetails, CommentWithAuthor } from '../useSocial';
 import { useSocial } from '../useSocial';
-import { useAuth } from '../../../lib/useAuth';
+import { useAuth } from '../../../lib/AuthContext';
 
 interface PostCardProps {
   post: PostWithDetails;

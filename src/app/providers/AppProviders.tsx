@@ -8,19 +8,20 @@
  * 1. ThemeProvider - No dependencies, provides theme context
  * 2. AuthProvider - No dependencies, provides auth state
  * 3. PlatformProvider - Depends on AuthProvider
- * 4. CartProvider - Depends on AuthProvider
+ * 4. BagProvider - Depends on AuthProvider
  * 5. FavoritesProvider - Depends on AuthProvider
- * 6. CheckoutProvider - Depends on AuthProvider, CartProvider
+ * 6. CheckoutProvider - Depends on AuthProvider, BagProvider
  */
 
 import React, { ComponentType, ReactNode } from 'react';
-import { HashRouter } from 'react-router-dom';
+import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from '../../lib/AuthContext';
 import { PlatformProvider } from '../../lib/PlatformContext';
-import { CartProvider } from '../../lib/CartContext';
+import { BagProvider } from '../../lib/BagContext';
 import { FavoritesProvider } from '../../lib/FavoritesContext';
 import { CheckoutProvider } from '../../lib/CheckoutContext';
 import { ThemeProvider } from '../../contexts/ThemeContext';
+import { UnifiedBagProvider } from '../../lib/UnifiedBagContext';
 
 type ProviderComponent = ComponentType<{ children: ReactNode }>;
 
@@ -49,15 +50,16 @@ function composeProviders(...providers: ProviderComponent[]): ProviderComponent 
  * - ThemeProvider: Independent, provides theme
  * - AuthProvider: Independent, provides user/session
  * - PlatformProvider: Uses useAuth
- * - CartProvider: Uses useAuth
+ * - BagProvider: Uses useAuth
  * - FavoritesProvider: Uses useAuth
- * - CheckoutProvider: Uses useAuth, useCart
+ * - CheckoutProvider: Uses useAuth, useBag
  */
 const providers: ProviderComponent[] = [
   ThemeProvider,
   AuthProvider,
   PlatformProvider,
-  CartProvider,
+  BagProvider,
+  UnifiedBagProvider,
   FavoritesProvider,
   CheckoutProvider,
 ];
@@ -75,7 +77,7 @@ interface AppProvidersProps {
 export function AppProviders({ children }: AppProvidersProps) {
   return (
     <ComposedProviders>
-      <HashRouter>{children}</HashRouter>
+      <BrowserRouter>{children}</BrowserRouter>
     </ComposedProviders>
   );
 }

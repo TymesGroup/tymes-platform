@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useAuth } from '../../../lib/useAuth';
+import { useAuth } from '../../../lib/AuthContext';
 import {
   Image,
   Video,

@@ -1,5 +1,14 @@
 import { supabase } from '../../../lib/supabase';
 
+export interface ServiceMedia {
+  id: string;
+  url: string;
+  type: 'image' | 'video';
+  position: number;
+  is_primary: boolean;
+  alt_text?: string;
+}
+
 export interface Service {
   id: string;
   name: string;
@@ -13,6 +22,7 @@ export interface Service {
   rating?: number;
   total_reviews?: number;
   delivery_time?: string;
+  media?: ServiceMedia[];
 }
 
 export interface ServiceWithFreelancer extends Service {
@@ -44,6 +54,7 @@ export const workService = {
   },
 
   async getById(id: string) {
+    // Fetch service with freelancer
     const { data, error } = await supabase
       .from('products')
       .select(
@@ -52,7 +63,15 @@ export const workService = {
       .eq('id', id)
       .single();
     if (error) throw error;
-    return data as ServiceWithFreelancer;
+
+    // Fetch media
+    const { data: mediaData } = await supabase
+      .from('service_media')
+      .select('*')
+      .eq('product_id', id)
+      .order('position');
+
+    return { ...data, media: mediaData || [] } as ServiceWithFreelancer;
   },
 
   async getByFreelancer(freelancerId: string) {

@@ -3,4 +3,6 @@
 
 export { CheckoutPage } from './CheckoutPage';
 export { OrdersPage } from './OrdersPage';
-export { FavoritesPage } from './FavoritesPage';
+export { SavesPage, FavoritesPage } from './SavesPage';
+export { NotificationsPage } from './NotificationsPage';
+export { BagPage, CartPage } from './CartPage';

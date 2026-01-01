@@ -127,7 +127,7 @@ export const ShopStats: React.FC<ShopStatsProps> = ({ profile }) => {
         </div>
         <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-zinc-500 text-sm">Carrinho</span>
+            <span className="text-zinc-500 text-sm">Bolsa</span>
             <ShoppingBag className="text-rose-500" size={20} />
           </div>
           <div className="text-2xl font-bold">3 itens</div>

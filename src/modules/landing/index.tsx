@@ -21,7 +21,7 @@ interface LandingProps {
   onEnter: () => void;
 }
 
-export const Landing: React.FC<LandingProps> = ({ onEnter }) => {
+export const Landing: React.FC<LandingProps> = () => {
   const navigate = useNavigate();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
@@ -108,7 +108,7 @@ export const Landing: React.FC<LandingProps> = ({ onEnter }) => {
               {modules.map(m => (
                 <a
                   key={m.id}
-                  href={`#${m.id}`}
+                  href={`/${m.id}`}
                   className="text-xs font-normal text-[#1d1d1f] dark:text-[#f5f5f7] hover:opacity-60 transition-opacity"
                 >
                   {m.title}

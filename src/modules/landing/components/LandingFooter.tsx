@@ -41,13 +41,18 @@ export const LandingFooter: React.FC = () => {
               Empresa
             </h4>
             <ul className="space-y-2">
-              {['Sobre', 'Blog', 'Carreiras', 'Imprensa'].map(item => (
-                <li key={item}>
+              {[
+                { label: 'Sobre', href: '/sobre' },
+                { label: 'Blog', href: '/blog' },
+                { label: 'Carreiras', href: '/carreiras' },
+                { label: 'Imprensa', href: '/imprensa' },
+              ].map(item => (
+                <li key={item.label}>
                   <a
-                    href="#"
+                    href={item.href}
                     className="text-[12px] text-[#424245] dark:text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7] transition-colors"
                   >
-                    {item}
+                    {item.label}
                   </a>
                 </li>
               ))}
@@ -59,13 +64,18 @@ export const LandingFooter: React.FC = () => {
               Suporte
             </h4>
             <ul className="space-y-2">
-              {['Central de Ajuda', 'Documentação', 'API', 'Status'].map(item => (
-                <li key={item}>
+              {[
+                { label: 'Central de Ajuda', href: '/ajuda' },
+                { label: 'Documentação', href: '/documentacao' },
+                { label: 'API', href: '/api' },
+                { label: 'Status', href: '/status' },
+              ].map(item => (
+                <li key={item.label}>
                   <a
-                    href="#"
+                    href={item.href}
                     className="text-[12px] text-[#424245] dark:text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7] transition-colors"
                   >
-                    {item}
+                    {item.label}
                   </a>
                 </li>
               ))}
@@ -77,13 +87,18 @@ export const LandingFooter: React.FC = () => {
               Legal
             </h4>
             <ul className="space-y-2">
-              {['Termos de Uso', 'Privacidade', 'Cookies', 'LGPD'].map(item => (
-                <li key={item}>
+              {[
+                { label: 'Termos de Uso', href: '/termos' },
+                { label: 'Privacidade', href: '/privacidade' },
+                { label: 'Cookies', href: '/cookies' },
+                { label: 'LGPD', href: '/lgpd' },
+              ].map(item => (
+                <li key={item.label}>
                   <a
-                    href="#"
+                    href={item.href}
                     className="text-[12px] text-[#424245] dark:text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7] transition-colors"
                   >
-                    {item}
+                    {item.label}
                   </a>
                 </li>
               ))}

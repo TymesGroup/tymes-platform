@@ -1,16 +1,41 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase, userPreferences, analyticsStorage } from './supabase';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from 'react';
+import { User, Session, AuthChangeEvent } from '@supabase/supabase-js';
+import {
+  supabase,
+  userPreferences,
+  analyticsStorage,
+  clearAllAppData,
+  hasStoredSession,
+} from './supabase';
 import { preloadPublicData, preloadUserData, clearUserData } from './preloadData';
 import { encryptValue, decryptValue, clearEncryptionKey } from './crypto';
+import { dataCache } from './dataCache';
 import type { Tables } from './database.types';
 
 export type Profile = Tables<'profiles'>;
 
-// Session time constants
-const SESSION_TIMEOUT_WARNING = 25 * 60 * 1000; // 25 minutes - warning before expiration
-const SESSION_ACTIVITY_INTERVAL = 5 * 60 * 1000; // 5 minutes - activity check interval
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
 const LAST_ACTIVITY_KEY = 'tymes_last_activity';
+const ACCOUNTS_KEY = 'tymes_saved_accounts';
+const CREDENTIALS_KEY = 'tymes_saved_credentials';
+
+// Session refresh interval: 4 minutes (tokens typically expire in 1 hour)
+const SESSION_REFRESH_INTERVAL = 4 * 60 * 1000;
+
+// ============================================================================
+// TYPES
+// ============================================================================
 
 interface StoredAccount {
   id: string;
@@ -25,6 +50,7 @@ interface AuthState {
   profile: Profile | null;
   session: Session | null;
   loading: boolean;
+  initialized: boolean;
   accounts: StoredAccount[];
 }
 
@@ -69,29 +95,33 @@ interface AuthContextType extends AuthState {
   clearAllData: () => void;
   updateProfile: (data: ProfileUpdateData) => Promise<{ error: any }>;
   refreshProfile: () => Promise<void>;
+  refreshSession: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const ACCOUNTS_KEY = 'tymes_saved_accounts';
-const CREDENTIALS_KEY = 'tymes_saved_credentials';
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
 
-// Function to update last activity
-const updateLastActivity = () => {
-  const now = Date.now();
-  localStorage.setItem(LAST_ACTIVITY_KEY, now.toString());
+function updateLastActivity(): void {
+  try {
+    localStorage.setItem(LAST_ACTIVITY_KEY, Date.now().toString());
+  } catch {}
+}
 
-  // Também salva em cookie para persistência cross-tab
-  const maxAge = 30 * 24 * 60 * 60; // 30 dias
-  const secure = window.location.protocol === 'https:' ? 'Secure;' : '';
-  document.cookie = `${LAST_ACTIVITY_KEY}=${now}; path=/; max-age=${maxAge}; ${secure} SameSite=Lax;`;
-};
+function getLastActivity(): number {
+  try {
+    const stored = localStorage.getItem(LAST_ACTIVITY_KEY);
+    return stored ? parseInt(stored, 10) : Date.now();
+  } catch {
+    return Date.now();
+  }
+}
 
-// Function to get last activity
-const getLastActivity = (): number => {
-  const stored = localStorage.getItem(LAST_ACTIVITY_KEY);
-  return stored ? parseInt(stored, 10) : Date.now();
-};
+// ============================================================================
+// AUTH PROVIDER
+// ============================================================================
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>({
@@ -99,78 +129,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     profile: null,
     session: null,
     loading: true,
+    initialized: false,
     accounts: [],
   });
 
   const pendingPwdRef = useRef<string | null>(null);
   const mountedRef = useRef(true);
-  const activityIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const initializingRef = useRef(false);
 
-  // Update activity on user interactions
-  useEffect(() => {
-    const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+  // ============================================================================
+  // ACCOUNT MANAGEMENT
+  // ============================================================================
 
-    const handleActivity = () => {
-      updateLastActivity();
-    };
-
-    events.forEach(event => {
-      window.addEventListener(event, handleActivity, { passive: true });
-    });
-
-    return () => {
-      events.forEach(event => {
-        window.removeEventListener(event, handleActivity);
-      });
-    };
-  }, []);
-
-  // Check and refresh session periodically
-  useEffect(() => {
-    const checkAndRefreshSession = async () => {
-      if (!state.session) return;
-
-      const lastActivity = getLastActivity();
-      const now = Date.now();
-      const timeSinceActivity = now - lastActivity;
-
-      // Se houve atividade recente, tenta renovar o token
-      if (timeSinceActivity < SESSION_TIMEOUT_WARNING) {
-        try {
-          const { data, error } = await supabase.auth.refreshSession();
-          if (error) {
-            console.warn('Session refresh failed:', error.message);
-          } else if (data.session) {
-            console.log('🔄 Session refreshed successfully');
-            analyticsStorage.trackEvent('session_refreshed');
-          }
-        } catch (e) {
-          console.warn('Session refresh error:', e);
-        }
-      }
-    };
-
-    // Check every 5 minutes
-    activityIntervalRef.current = setInterval(checkAndRefreshSession, SESSION_ACTIVITY_INTERVAL);
-
-    // Também verifica quando a aba volta a ficar visível
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        checkAndRefreshSession();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      if (activityIntervalRef.current) {
-        clearInterval(activityIntervalRef.current);
-      }
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [state.session]);
-
-  // Load accounts from storage
   const loadAccounts = useCallback((): StoredAccount[] => {
     try {
       const data = localStorage.getItem(ACCOUNTS_KEY);
@@ -180,12 +151,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Save accounts to storage
   const saveAccounts = useCallback((accounts: StoredAccount[]) => {
-    localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
+    try {
+      localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
+    } catch {}
   }, []);
 
-  // Save credentials (async with encryption)
   const saveCredentials = useCallback(async (id: string, email: string, password: string) => {
     try {
       const data = localStorage.getItem(CREDENTIALS_KEY);
@@ -193,12 +164,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const encryptedPwd = await encryptValue(password);
       creds[id] = { email, pwd: encryptedPwd };
       localStorage.setItem(CREDENTIALS_KEY, JSON.stringify(creds));
-    } catch (e) {
-      // Silent fail - credentials won't be saved but app continues
-    }
+    } catch {}
   }, []);
 
-  // Get credentials (async with decryption)
   const getCredentials = useCallback(
     async (id: string): Promise<{ email: string; password: string } | null> => {
       try {
@@ -215,7 +183,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
-  // Remove credentials
   const removeCredentials = useCallback((id: string) => {
     try {
       const data = localStorage.getItem(CREDENTIALS_KEY);
@@ -226,69 +193,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {}
   }, []);
 
-  // Clear all data
-  const clearAllData = useCallback(() => {
-    localStorage.removeItem(ACCOUNTS_KEY);
-    localStorage.removeItem(CREDENTIALS_KEY);
-    localStorage.removeItem(LAST_ACTIVITY_KEY);
-    localStorage.removeItem('tymes_user_preferences');
-    localStorage.removeItem('tymes_analytics');
+  // ============================================================================
+  // PROFILE FETCHING
+  // ============================================================================
 
-    // Clear encryption key from session storage
-    clearEncryptionKey();
-
-    // Clear all Supabase items
-    Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('sb-') || key.startsWith('tymes-')) {
-        localStorage.removeItem(key);
-      }
-    });
-
-    // Clear related cookies
-    const cookiesToClear = [
-      'tymes-auth-token',
-      LAST_ACTIVITY_KEY,
-      'tymes_user_preferences',
-      'tymes_session_id',
-    ];
-
-    cookiesToClear.forEach(name => {
-      document.cookie = `${name}=; path=/; max-age=0;`;
-    });
-
-    // Clear sessionStorage
-    sessionStorage.clear();
-
-    setState({ user: null, profile: null, session: null, loading: false, accounts: [] });
-
-    analyticsStorage.trackEvent('all_data_cleared');
-  }, []);
-
-  // Fetch profile from Supabase (always fresh data)
   const fetchProfile = useCallback(
-    async (userId: string, session: Session) => {
-      // Always fetch fresh data from Supabase
-      let profile = null;
-      for (let i = 0; i < 3; i++) {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .maybeSingle();
+    async (userId: string, session: Session): Promise<Profile | null> => {
+      // Try up to 3 times with exponential backoff
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', userId)
+            .maybeSingle();
 
-        if (data) {
-          profile = data;
-          break;
+          if (error) {
+            console.warn(`Profile fetch attempt ${attempt + 1} failed:`, error.message);
+            if (attempt < 2) {
+              await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 500));
+              continue;
+            }
+          }
+
+          return data;
+        } catch (e) {
+          console.warn(`Profile fetch attempt ${attempt + 1} error:`, e);
+          if (attempt < 2) {
+            await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 500));
+          }
         }
-        if (error) console.error('Profile fetch error:', error);
-        await new Promise(r => setTimeout(r, 500));
       }
+      return null;
+    },
+    []
+  );
 
+  const updateStateWithProfile = useCallback(
+    (session: Session, profile: Profile | null) => {
       if (!mountedRef.current) return;
 
-      setState(s => ({ ...s, user: session.user, profile, session, loading: false }));
+      setState(s => ({
+        ...s,
+        user: session.user,
+        profile,
+        session,
+        loading: false,
+        initialized: true,
+      }));
 
-      // Update saved accounts with fresh data
+      // Update saved accounts
       if (profile) {
         const accs = loadAccounts();
         const idx = accs.findIndex(a => a.id === profile.id);
@@ -319,60 +273,149 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [loadAccounts, saveAccounts, saveCredentials]
   );
 
-  // Initialize auth state
+  // ============================================================================
+  // SESSION MANAGEMENT
+  // ============================================================================
+
+  const refreshSession = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.auth.refreshSession();
+      if (error) {
+        console.warn('Session refresh failed:', error.message);
+        return;
+      }
+      if (data.session && mountedRef.current) {
+        setState(s => ({ ...s, session: data.session }));
+      }
+    } catch (e) {
+      console.warn('Session refresh error:', e);
+    }
+  }, []);
+
+  // ============================================================================
+  // INITIALIZATION
+  // ============================================================================
+
   useEffect(() => {
     mountedRef.current = true;
+
+    // Prevent double initialization
+    if (initializingRef.current) return;
+    initializingRef.current = true;
 
     // Load saved accounts
     const accounts = loadAccounts();
     setState(s => ({ ...s, accounts }));
 
-    // Preload public data immediately for instant page loads
+    // Preload public data immediately
     preloadPublicData().catch(console.error);
 
-    // Safety timeout
+    // Safety timeout - if initialization takes too long, stop loading
     const timeout = setTimeout(() => {
       if (mountedRef.current) {
-        setState(s => (s.loading ? { ...s, loading: false } : s));
+        setState(s => (s.loading ? { ...s, loading: false, initialized: true } : s));
       }
     }, 5000);
 
-    // Get current session
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (!mountedRef.current) return;
-      if (error) {
-        console.error('Session error:', error);
-        setState(s => ({ ...s, loading: false }));
-        return;
+    // Initialize auth state
+    const initAuth = async () => {
+      try {
+        // Check if we have a stored session first
+        if (!hasStoredSession()) {
+          if (mountedRef.current) {
+            setState(s => ({ ...s, loading: false, initialized: true }));
+          }
+          return;
+        }
+
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession();
+
+        if (error) {
+          console.error('Session error:', error);
+          if (mountedRef.current) {
+            setState(s => ({ ...s, loading: false, initialized: true }));
+          }
+          return;
+        }
+
+        if (session?.user) {
+          // Preload user data
+          preloadUserData(session.user.id).catch(console.error);
+
+          // Fetch profile
+          const profile = await fetchProfile(session.user.id, session);
+          updateStateWithProfile(session, profile);
+        } else {
+          if (mountedRef.current) {
+            setState(s => ({ ...s, loading: false, initialized: true }));
+          }
+        }
+      } catch (e) {
+        console.error('Auth initialization error:', e);
+        if (mountedRef.current) {
+          setState(s => ({ ...s, loading: false, initialized: true }));
+        }
       }
-      if (session?.user) {
-        // Preload user data for instant page loads
-        preloadUserData(session.user.id).catch(console.error);
-        fetchProfile(session.user.id, session);
-      } else {
-        setState(s => ({ ...s, loading: false }));
-      }
-    });
+    };
+
+    initAuth();
 
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
       if (!mountedRef.current) return;
 
-      if (event === 'SIGNED_OUT') {
-        // Clear user-specific cache on logout
-        if (state.user?.id) {
-          clearUserData(state.user.id);
-        }
-        setState(s => ({ ...s, user: null, profile: null, session: null, loading: false }));
-        return;
-      }
+      console.log('🔔 Auth event:', event);
 
-      if (session?.user) {
-        // Preload user data on login
-        preloadUserData(session.user.id).catch(console.error);
-        await fetchProfile(session.user.id, session);
+      switch (event) {
+        case 'SIGNED_OUT':
+          // Clear all cache
+          dataCache.clear();
+          setState(s => {
+            // Clear user-specific cache if we had a user
+            if (s.user?.id) {
+              clearUserData(s.user.id);
+            }
+            return {
+              ...s,
+              user: null,
+              profile: null,
+              session: null,
+              loading: false,
+              initialized: true,
+            };
+          });
+          break;
+
+        case 'SIGNED_IN':
+        case 'TOKEN_REFRESHED':
+          if (session?.user) {
+            // Only fetch profile on SIGNED_IN, not on every token refresh
+            if (event === 'SIGNED_IN') {
+              preloadUserData(session.user.id).catch(console.error);
+              const profile = await fetchProfile(session.user.id, session);
+              updateStateWithProfile(session, profile);
+            } else {
+              // Just update session on token refresh
+              setState(s => ({ ...s, session }));
+            }
+          }
+          break;
+
+        case 'USER_UPDATED':
+          if (session?.user) {
+            const profile = await fetchProfile(session.user.id, session);
+            updateStateWithProfile(session, profile);
+          }
+          break;
+
+        case 'INITIAL_SESSION':
+          // Handled by initAuth above
+          break;
       }
     });
 
@@ -380,99 +423,174 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       mountedRef.current = false;
       clearTimeout(timeout);
       subscription.unsubscribe();
-    };
-  }, [loadAccounts, fetchProfile]);
-
-  // Sign up
-  async function signUp(
-    email: string,
-    password: string,
-    metadata: {
-      name: string;
-      document: string;
-      phone: string;
-      type: 'PERSONAL' | 'BUSINESS';
-      birth_date: string;
-      address_street: string;
-      address_number: string;
-      address_complement?: string;
-      address_neighborhood: string;
-      address_city: string;
-      address_state: string;
-      address_zip_code: string;
-      address_country?: string;
-    }
-  ) {
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            ...metadata,
-            address_country: metadata.address_country || 'Brasil',
-          },
-        },
-      });
-      if (error) return { data, error };
-      pendingPwdRef.current = password;
-      return { data, error: null };
-    } catch (err: any) {
-      return {
-        data: null,
-        error: { message: err.message || 'Erro ao criar conta', name: 'AuthError', status: 500 },
-      };
-    }
-  }
-
-  // Sign in
-  async function signIn(email: string, password: string) {
-    try {
-      setState(s => ({ ...s, loading: true }));
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-
-      if (error) {
-        setState(s => ({ ...s, loading: false }));
-        analyticsStorage.trackEvent('login_failed', { reason: error.message });
-        return { data: null, error };
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
       }
+    };
+  }, [loadAccounts, fetchProfile, updateStateWithProfile]);
 
-      pendingPwdRef.current = password;
-      updateLastActivity();
+  // ============================================================================
+  // ACTIVITY TRACKING & SESSION REFRESH
+  // ============================================================================
 
-      // Save "remember me" preference implicitly
-      userPreferences.set('rememberLogin', true);
-      userPreferences.set('lastLoginEmail', email);
+  useEffect(() => {
+    const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+    const handleActivity = () => updateLastActivity();
 
-      analyticsStorage.trackEvent('login_success', { method: 'email' });
+    events.forEach(event => {
+      window.addEventListener(event, handleActivity, { passive: true });
+    });
 
-      return { data, error: null };
-    } catch (err: any) {
-      setState(s => ({ ...s, loading: false }));
-      return {
-        data: null,
-        error: { message: err.message || 'Erro ao fazer login', name: 'AuthError', status: 500 },
-      };
+    return () => {
+      events.forEach(event => {
+        window.removeEventListener(event, handleActivity);
+      });
+    };
+  }, []);
+
+  // Periodic session refresh when user is active
+  useEffect(() => {
+    if (!state.session) {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
+      }
+      return;
     }
-  }
 
-  // Sign out
-  async function signOut() {
+    refreshIntervalRef.current = setInterval(() => {
+      const lastActivity = getLastActivity();
+      const now = Date.now();
+
+      // Only refresh if user was active in the last 10 minutes
+      if (now - lastActivity < 10 * 60 * 1000) {
+        refreshSession();
+      }
+    }, SESSION_REFRESH_INTERVAL);
+
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+      }
+    };
+  }, [state.session, refreshSession]);
+
+  // ============================================================================
+  // AUTH METHODS
+  // ============================================================================
+
+  const signUp = useCallback(
+    async (
+      email: string,
+      password: string,
+      metadata: {
+        name: string;
+        document: string;
+        phone: string;
+        type: 'PERSONAL' | 'BUSINESS';
+        birth_date: string;
+        address_street: string;
+        address_number: string;
+        address_complement?: string;
+        address_neighborhood: string;
+        address_city: string;
+        address_state: string;
+        address_zip_code: string;
+        address_country?: string;
+      }
+    ) => {
+      try {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              ...metadata,
+              address_country: metadata.address_country || 'Brasil',
+            },
+          },
+        });
+
+        if (error) return { data, error };
+
+        pendingPwdRef.current = password;
+        analyticsStorage.trackEvent('signup_success', { type: metadata.type });
+
+        return { data, error: null };
+      } catch (err: any) {
+        return {
+          data: null,
+          error: { message: err.message || 'Erro ao criar conta', name: 'AuthError', status: 500 },
+        };
+      }
+    },
+    []
+  );
+
+  const signIn = useCallback(
+    async (email: string, password: string) => {
+      try {
+        setState(s => ({ ...s, loading: true }));
+
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+        if (error) {
+          setState(s => ({ ...s, loading: false }));
+          analyticsStorage.trackEvent('login_failed', { reason: error.message });
+          return { data: null, error };
+        }
+
+        pendingPwdRef.current = password;
+        updateLastActivity();
+
+        userPreferences.set('lastLoginEmail', email);
+        analyticsStorage.trackEvent('login_success', { method: 'email' });
+
+        // Fetch profile immediately after successful login
+        // The onAuthStateChange will also fire, but we handle it here for faster UX
+        if (data.session?.user) {
+          preloadUserData(data.session.user.id).catch(console.error);
+          const profile = await fetchProfile(data.session.user.id, data.session);
+          updateStateWithProfile(data.session, profile);
+        }
+
+        return { data, error: null };
+      } catch (err: any) {
+        setState(s => ({ ...s, loading: false }));
+        return {
+          data: null,
+          error: { message: err.message || 'Erro ao fazer login', name: 'AuthError', status: 500 },
+        };
+      }
+    },
+    [fetchProfile, updateStateWithProfile]
+  );
+
+  const signOut = useCallback(async () => {
     analyticsStorage.trackEvent('logout_initiated');
+
+    // Clear user data before signing out
+    if (state.user?.id) {
+      clearUserData(state.user.id);
+    }
+
+    // Clear all cache
+    dataCache.clear();
+
     const { error } = await supabase.auth.signOut();
 
-    // Clear session data but keep preferences
-    localStorage.removeItem(LAST_ACTIVITY_KEY);
-    document.cookie = `${LAST_ACTIVITY_KEY}=; path=/; max-age=0;`;
+    // Clear activity tracking
+    try {
+      localStorage.removeItem(LAST_ACTIVITY_KEY);
+    } catch {}
 
     return { error };
-  }
+  }, [state.user?.id]);
 
-  // Add another account
-  async function addAccount(email: string, password: string) {
+  const addAccount = useCallback(async (email: string, password: string) => {
     try {
       setState(s => ({ ...s, loading: true }));
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: 'local' });
       await new Promise(r => setTimeout(r, 100));
 
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -495,117 +613,156 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
       };
     }
-  }
+  }, []);
 
-  // Switch account
-  async function switchAccount(accountId: string) {
-    const creds = await getCredentials(accountId);
-    if (!creds) {
-      removeAccount(accountId);
-      return;
-    }
+  const switchAccount = useCallback(
+    async (accountId: string) => {
+      const creds = await getCredentials(accountId);
+      if (!creds) {
+        removeAccount(accountId);
+        return;
+      }
 
-    try {
-      setState(s => ({ ...s, loading: true }));
-      await supabase.auth.signOut();
-      await new Promise(r => setTimeout(r, 100));
+      try {
+        setState(s => ({ ...s, loading: true }));
+        await supabase.auth.signOut({ scope: 'local' });
+        await new Promise(r => setTimeout(r, 100));
 
-      const { error } = await supabase.auth.signInWithPassword({
-        email: creds.email,
-        password: creds.password,
-      });
+        const { error } = await supabase.auth.signInWithPassword({
+          email: creds.email,
+          password: creds.password,
+        });
 
-      if (error) {
+        if (error) {
+          setState(s => ({ ...s, loading: false }));
+          if (error.message?.includes('Invalid')) {
+            removeAccount(accountId);
+          }
+        }
+      } catch (err) {
+        console.error('Switch error:', err);
         setState(s => ({ ...s, loading: false }));
-        if (error.message?.includes('Invalid')) {
-          removeAccount(accountId);
-        }
       }
-    } catch (err) {
-      console.error('Switch error:', err);
-      setState(s => ({ ...s, loading: false }));
-    }
-  }
-
-  // Remove account
-  function removeAccount(accountId: string) {
-    const accounts = loadAccounts().filter(a => a.id !== accountId);
-    saveAccounts(accounts);
-    removeCredentials(accountId);
-    setState(s => ({ ...s, accounts }));
-  }
-
-  // Update profile - saves to Supabase and updates local state
-  async function updateProfile(data: ProfileUpdateData): Promise<{ error: any }> {
-    if (!state.profile?.id) {
-      return { error: { message: 'Usuário não autenticado' } };
-    }
-
-    try {
-      const { data: updatedProfile, error } = await supabase
-        .from('profiles')
-        .update({
-          ...data,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', state.profile.id)
-        .select()
-        .single();
-
-      if (error) {
-        return { error };
-      }
-
-      // Update local state immediately
-      setState(s => ({ ...s, profile: updatedProfile }));
-
-      // Update saved accounts list
-      if (updatedProfile) {
-        const accs = loadAccounts();
-        const idx = accs.findIndex(a => a.id === updatedProfile.id);
-        if (idx >= 0) {
-          accs[idx] = {
-            id: updatedProfile.id,
-            email: updatedProfile.email,
-            name: updatedProfile.name,
-            type: updatedProfile.type,
-            avatar_url: updatedProfile.avatar_url,
-          };
-          saveAccounts(accs);
-          setState(s => ({ ...s, accounts: accs }));
-        }
-      }
-
-      return { error: null };
-    } catch (err: any) {
-      return { error: { message: err.message || 'Erro ao atualizar perfil' } };
-    }
-  }
-
-  // Refresh profile from database
-  async function refreshProfile(): Promise<void> {
-    if (!state.user?.id || !state.session) return;
-    await fetchProfile(state.user.id, state.session);
-  }
-
-  return (
-    <AuthContext.Provider
-      value={{
-        ...state,
-        signUp,
-        signIn,
-        signOut,
-        addAccount,
-        switchAccount,
-        removeAccount,
-        clearAllData,
-        updateProfile,
-        refreshProfile,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+    },
+    [getCredentials]
   );
+
+  const removeAccount = useCallback(
+    (accountId: string) => {
+      const accounts = loadAccounts().filter(a => a.id !== accountId);
+      saveAccounts(accounts);
+      removeCredentials(accountId);
+      setState(s => ({ ...s, accounts }));
+    },
+    [loadAccounts, saveAccounts, removeCredentials]
+  );
+
+  const clearAllData = useCallback(() => {
+    // Clear all app data
+    clearAllAppData();
+    clearEncryptionKey();
+    dataCache.clear();
+
+    setState({
+      user: null,
+      profile: null,
+      session: null,
+      loading: false,
+      initialized: true,
+      accounts: [],
+    });
+
+    analyticsStorage.trackEvent('all_data_cleared');
+  }, []);
+
+  const updateProfile = useCallback(
+    async (data: ProfileUpdateData): Promise<{ error: any }> => {
+      if (!state.profile?.id) {
+        return { error: { message: 'Usuário não autenticado' } };
+      }
+
+      try {
+        const { data: updatedProfile, error } = await supabase
+          .from('profiles')
+          .update({
+            ...data,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', state.profile.id)
+          .select()
+          .single();
+
+        if (error) return { error };
+
+        setState(s => ({ ...s, profile: updatedProfile }));
+
+        // Update saved accounts
+        if (updatedProfile) {
+          const accs = loadAccounts();
+          const idx = accs.findIndex(a => a.id === updatedProfile.id);
+          if (idx >= 0) {
+            accs[idx] = {
+              id: updatedProfile.id,
+              email: updatedProfile.email,
+              name: updatedProfile.name,
+              type: updatedProfile.type,
+              avatar_url: updatedProfile.avatar_url,
+            };
+            saveAccounts(accs);
+            setState(s => ({ ...s, accounts: accs }));
+          }
+        }
+
+        return { error: null };
+      } catch (err: any) {
+        return { error: { message: err.message || 'Erro ao atualizar perfil' } };
+      }
+    },
+    [state.profile?.id, loadAccounts, saveAccounts]
+  );
+
+  const refreshProfile = useCallback(async (): Promise<void> => {
+    if (!state.user?.id || !state.session) return;
+    const profile = await fetchProfile(state.user.id, state.session);
+    if (profile && mountedRef.current) {
+      setState(s => ({ ...s, profile }));
+    }
+  }, [state.user?.id, state.session, fetchProfile]);
+
+  // ============================================================================
+  // CONTEXT VALUE
+  // ============================================================================
+
+  const contextValue = useMemo(
+    () => ({
+      ...state,
+      signUp,
+      signIn,
+      signOut,
+      addAccount,
+      switchAccount,
+      removeAccount,
+      clearAllData,
+      updateProfile,
+      refreshProfile,
+      refreshSession,
+    }),
+    [
+      state,
+      signUp,
+      signIn,
+      signOut,
+      addAccount,
+      switchAccount,
+      removeAccount,
+      clearAllData,
+      updateProfile,
+      refreshProfile,
+      refreshSession,
+    ]
+  );
+
+  return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

@@ -1,10 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../lib/AuthContext';
-import { dataCache, CACHE_KEYS } from '../../../lib/dataCache';
 
-// Types based on database schema
-interface AIConversation {
+// Types
+export interface AIConversation {
   id: string;
   user_id: string;
   title: string | null;
@@ -12,7 +11,7 @@ interface AIConversation {
   updated_at: string | null;
 }
 
-interface AIMessage {
+export interface AIMessage {
   id: string;
   conversation_id: string;
   role: 'user' | 'assistant';
@@ -21,56 +20,57 @@ interface AIMessage {
   created_at: string | null;
 }
 
-interface AISuggestion {
-  id: string;
-  user_id: string;
-  suggestion_type: string;
-  title: string;
-  description: string | null;
-  action_data?: Record<string, unknown>;
-  priority: number;
-  is_dismissed: boolean;
-  expires_at: string | null;
-  created_at: string | null;
-}
-
 interface UserStats {
-  totalPurchases: number;
+  totalProducts: number;
   totalCourses: number;
   completedTasks: number;
   totalPosts: number;
-  totalConnections: number;
+  totalOrders: number;
+}
+
+export interface ModuleAction {
+  id: string;
+  moduleSlug: string;
+  moduleName: string;
+  icon: string;
+  label: string;
+  prompt: string;
+  color: string;
 }
 
 export function useAIAssistant() {
   const { user, profile } = useAuth();
-  const conversationsCacheKey = user?.id ? CACHE_KEYS.AI_CONVERSATIONS(user.id) : '';
-  const suggestionsCacheKey = user?.id ? CACHE_KEYS.AI_SUGGESTIONS(user.id) : '';
 
-  // Initialize from cache immediately
-  const [conversations, setConversations] = useState<AIConversation[]>(() => {
-    if (!user?.id) return [];
-    return dataCache.get<AIConversation[]>(conversationsCacheKey) || [];
-  });
+  const [conversations, setConversations] = useState<AIConversation[]>([]);
   const [currentConversation, setCurrentConversation] = useState<AIConversation | null>(null);
   const [messages, setMessages] = useState<AIMessage[]>([]);
-  const [suggestions, setSuggestions] = useState<AISuggestion[]>(() => {
-    if (!user?.id) return [];
-    return dataCache.get<AISuggestion[]>(suggestionsCacheKey) || [];
-  });
   const [userStats, setUserStats] = useState<UserStats | null>(null);
-  const [loading, setLoading] = useState(() => {
-    if (!user?.id) return false;
-    return !dataCache.has(conversationsCacheKey);
-  });
+  const [userModules, setUserModules] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch user statistics for personalized suggestions
+  // Fetch user's enabled modules
+  const fetchUserModules = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('enabled_modules')
+        .eq('id', user.id)
+        .single();
+      if (data?.enabled_modules) {
+        setUserModules(data.enabled_modules);
+      }
+    } catch (err) {
+      console.error('Error fetching modules:', err);
+    }
+  }, [user?.id]);
+
+  // Fetch user statistics
   const fetchUserStats = useCallback(async () => {
     if (!user?.id) return;
-
     try {
-      const [purchasesResult, coursesResult, tasksResult, postsResult] = await Promise.all([
+      const [products, courses, tasks, posts, orders] = await Promise.all([
         supabase
           .from('products')
           .select('id', { count: 'exact', head: true })
@@ -88,56 +88,36 @@ export function useAIAssistant() {
           .from('posts')
           .select('id', { count: 'exact', head: true })
           .eq('author_id', user.id),
+        supabase.from('orders').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
       ]);
-
       setUserStats({
-        totalPurchases: purchasesResult.count || 0,
-        totalCourses: coursesResult.count || 0,
-        completedTasks: tasksResult.count || 0,
-        totalPosts: postsResult.count || 0,
-        totalConnections: 0,
+        totalProducts: products.count || 0,
+        totalCourses: courses.count || 0,
+        completedTasks: tasks.count || 0,
+        totalPosts: posts.count || 0,
+        totalOrders: orders.count || 0,
       });
     } catch (err) {
-      console.error('Error fetching user stats:', err);
+      console.error('Error fetching stats:', err);
     }
   }, [user?.id]);
 
-  // Fetch conversations with cache
-  const fetchConversations = useCallback(
-    async (forceRefresh = false) => {
-      if (!user?.id) return;
+  // Fetch all conversations
+  const fetchConversations = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('ai_conversations')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false });
 
-      try {
-        if (!dataCache.has(conversationsCacheKey)) {
-          setLoading(true);
-        }
-
-        const data = await dataCache.getOrFetch<AIConversation[]>(
-          conversationsCacheKey,
-          async () => {
-            const { data, error: fetchError } = await supabase
-              .from('ai_conversations')
-              .select('*')
-              .eq('user_id', user.id)
-              .order('updated_at', { ascending: false });
-
-            if (fetchError) throw fetchError;
-            return data || [];
-          },
-          { forceRefresh }
-        );
-
-        setConversations(data);
-        setError(null);
-      } catch (err) {
-        console.error('Error fetching conversations:', err);
-        setError('Erro ao carregar conversas');
-      } finally {
-        setLoading(false);
-      }
-    },
-    [user?.id, conversationsCacheKey]
-  );
+      if (fetchError) throw fetchError;
+      setConversations(data || []);
+    } catch (err) {
+      console.error('Error fetching conversations:', err);
+    }
+  }, [user?.id]);
 
   // Fetch messages for a conversation
   const fetchMessages = useCallback(async (conversationId: string) => {
@@ -148,12 +128,7 @@ export function useAIAssistant() {
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true });
 
-      if (fetchError) {
-        console.error('Error fetching messages:', fetchError);
-        setError('Erro ao carregar mensagens');
-        return;
-      }
-
+      if (fetchError) throw fetchError;
       setMessages(data || []);
     } catch (err) {
       console.error('Error fetching messages:', err);
@@ -161,69 +136,21 @@ export function useAIAssistant() {
     }
   }, []);
 
-  // Fetch suggestions with cache
-  const fetchSuggestions = useCallback(
-    async (forceRefresh = false) => {
-      if (!user?.id) return;
-
-      try {
-        const data = await dataCache.getOrFetch<AISuggestion[]>(
-          suggestionsCacheKey,
-          async () => {
-            const { data, error: fetchError } = await supabase
-              .from('ai_suggestions')
-              .select('*')
-              .eq('user_id', user.id)
-              .eq('is_dismissed', false)
-              .order('priority', { ascending: false })
-              .limit(6);
-
-            if (fetchError) {
-              console.log('Suggestions table not available:', fetchError.message);
-              return [];
-            }
-            return data || [];
-          },
-          { forceRefresh }
-        );
-
-        setSuggestions(data);
-      } catch (err) {
-        console.log('Error fetching suggestions:', err);
-      }
-    },
-    [user?.id, suggestionsCacheKey]
-  );
-
   // Create new conversation
   const createConversation = useCallback(
-    async (title?: string) => {
+    async (title: string): Promise<AIConversation | null> => {
       if (!user?.id) return null;
-
       try {
         const { data, error: insertError } = await supabase
           .from('ai_conversations')
-          .insert({
-            user_id: user.id,
-            title: title || 'Nova conversa',
-          })
+          .insert({ user_id: user.id, title })
           .select()
           .single();
 
-        if (insertError) {
-          console.error('Error creating conversation:', insertError);
-          setError('Erro ao criar conversa');
-          return null;
-        }
+        if (insertError) throw insertError;
 
-        // Update cache
-        dataCache.update<AIConversation[]>(conversationsCacheKey, current => [
-          data,
-          ...(current || []),
-        ]);
         setConversations(prev => [data, ...prev]);
         setCurrentConversation(data);
-        setMessages([]);
         return data;
       } catch (err) {
         console.error('Error creating conversation:', err);
@@ -231,368 +158,363 @@ export function useAIAssistant() {
         return null;
       }
     },
-    [user?.id, conversationsCacheKey]
+    [user?.id]
   );
 
-  // Send message
-  const sendMessage = useCallback(
-    async (content: string) => {
-      if (!user?.id || !content.trim()) return;
-
-      setError(null);
-      let conversation = currentConversation;
-
-      // Create conversation if none exists
-      if (!conversation) {
-        // Use first few words as title
-        const title = content.slice(0, 50) + (content.length > 50 ? '...' : '');
-        conversation = await createConversation(title);
-        if (!conversation) return;
-      }
-
-      // Optimistically add user message to UI
-      const tempUserMessage: AIMessage = {
-        id: `temp-${Date.now()}`,
-        conversation_id: conversation.id,
-        role: 'user',
-        content,
-        created_at: new Date().toISOString(),
-      };
-      setMessages(prev => [...prev, tempUserMessage]);
-
+  // Upload file to Supabase storage
+  const uploadFile = useCallback(
+    async (file: File, conversationId: string): Promise<string | null> => {
+      if (!user?.id) return null;
       try {
-        // Add user message to database
-        const { data: userMessage, error: userError } = await supabase
-          .from('ai_messages')
-          .insert({
-            conversation_id: conversation.id,
-            role: 'user' as const,
-            content,
-          })
-          .select()
-          .single();
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user.id}/${conversationId}/${Date.now()}.${fileExt}`;
 
-        if (userError) {
-          console.error('Error saving user message:', userError);
-          setError('Erro ao enviar mensagem');
-          // Remove temp message on error
-          setMessages(prev => prev.filter(m => m.id !== tempUserMessage.id));
-          return;
+        const { error: uploadError } = await supabase.storage
+          .from('ai-attachments')
+          .upload(fileName, file);
+
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          return null;
         }
 
-        // Replace temp message with real one
-        setMessages(prev => prev.map(m => (m.id === tempUserMessage.id ? userMessage : m)));
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from('ai-attachments').getPublicUrl(fileName);
 
-        // Generate AI response based on profile type and context
-        const aiResponse = generateAIResponse(content, profile?.type || 'PERSONAL', userStats);
-
-        // Add AI response to database
-        const { data: assistantMessage, error: assistantError } = await supabase
-          .from('ai_messages')
-          .insert({
-            conversation_id: conversation.id,
-            role: 'assistant' as const,
-            content: aiResponse,
-          })
-          .select()
-          .single();
-
-        if (assistantError) {
-          console.error('Error saving assistant message:', assistantError);
-          setError('Erro ao gerar resposta');
-          return;
-        }
-
-        setMessages(prev => [...prev, assistantMessage]);
-
-        // Update conversation title if it's the first message
-        if (messages.length === 0) {
-          const title = content.slice(0, 50) + (content.length > 50 ? '...' : '');
-          await supabase.from('ai_conversations').update({ title }).eq('id', conversation.id);
-
-          setConversations(prev =>
-            prev.map(c => (c.id === conversation!.id ? { ...c, title } : c))
-          );
-        }
-
-        // Log activity
-        await logActivity('ai_chat', 'ai_conversation', conversation.id);
+        return publicUrl;
       } catch (err) {
-        console.error('Error in sendMessage:', err);
-        setError('Erro ao processar mensagem');
-        // Remove temp message on error
-        setMessages(prev => prev.filter(m => m.id !== tempUserMessage.id));
-      }
-    },
-    [currentConversation, createConversation, user?.id, profile?.type, userStats, messages.length]
-  );
-
-  // Dismiss suggestion
-  const dismissSuggestion = useCallback(
-    async (suggestionId: string) => {
-      // Optimistic update
-      setSuggestions(prev => prev.filter(s => s.id !== suggestionId));
-      dataCache.update<AISuggestion[]>(suggestionsCacheKey, current =>
-        (current || []).filter(s => s.id !== suggestionId)
-      );
-
-      try {
-        await supabase.from('ai_suggestions').update({ is_dismissed: true }).eq('id', suggestionId);
-      } catch (err) {
-        console.error('Error dismissing suggestion:', err);
-        fetchSuggestions(true); // Revert on error
-      }
-    },
-    [suggestionsCacheKey, fetchSuggestions]
-  );
-
-  // Log user activity
-  const logActivity = useCallback(
-    async (
-      activityType: string,
-      entityType?: string,
-      entityId?: string,
-      metadata?: Record<string, unknown>
-    ) => {
-      if (!user?.id) return;
-
-      try {
-        await supabase.from('user_activity_log').insert({
-          user_id: user.id,
-          activity_type: activityType,
-          entity_type: entityType,
-          entity_id: entityId,
-          metadata: metadata || {},
-        });
-      } catch (err) {
-        // Silent fail for activity logging
-        console.log('Activity log error:', err);
+        console.error('Error uploading file:', err);
+        return null;
       }
     },
     [user?.id]
   );
 
-  // Select conversation
+  // Send message - main function
+  const sendMessage = useCallback(
+    async (content: string, attachments: File[] = []) => {
+      if (!user?.id || !content.trim()) return;
+
+      setError(null);
+      let conv = currentConversation;
+
+      // Create conversation if needed
+      if (!conv) {
+        const title = content.length > 50 ? content.slice(0, 50) + '...' : content;
+        conv = await createConversation(title);
+        if (!conv) return;
+      }
+
+      const conversationId = conv.id;
+
+      // Upload attachments if any
+      const uploadedUrls: string[] = [];
+      for (const file of attachments) {
+        const url = await uploadFile(file, conversationId);
+        if (url) uploadedUrls.push(url);
+      }
+
+      // Build message content with attachments
+      let fullContent = content;
+      if (uploadedUrls.length > 0) {
+        fullContent +=
+          '\n\n📎 Anexos: ' + uploadedUrls.map((_, i) => `Arquivo ${i + 1}`).join(', ');
+      }
+
+      // Add user message to UI immediately
+      const userMsg: AIMessage = {
+        id: `user-${Date.now()}`,
+        conversation_id: conversationId,
+        role: 'user',
+        content: fullContent,
+        metadata: uploadedUrls.length > 0 ? { attachments: uploadedUrls } : undefined,
+        created_at: new Date().toISOString(),
+      };
+      setMessages(prev => [...prev, userMsg]);
+
+      try {
+        // Save user message to database
+        const { data: savedUserMsg, error: userErr } = await supabase
+          .from('ai_messages')
+          .insert({
+            conversation_id: conversationId,
+            role: 'user',
+            content: fullContent,
+            metadata: uploadedUrls.length > 0 ? { attachments: uploadedUrls } : {},
+          })
+          .select()
+          .single();
+
+        if (userErr) {
+          console.error('Error saving user message:', userErr);
+          setError('Erro ao enviar mensagem');
+          // Remove optimistic message on error
+          setMessages(prev => prev.filter(m => m.id !== userMsg.id));
+          return;
+        }
+
+        // Update user message with real ID
+        setMessages(prev => prev.map(m => (m.id === userMsg.id ? savedUserMsg : m)));
+
+        // Generate AI response
+        const aiContent = generateAIResponse(
+          content,
+          profile?.type || 'PERSONAL',
+          userStats,
+          userModules
+        );
+
+        // Add AI message to UI
+        const aiMsg: AIMessage = {
+          id: `ai-${Date.now()}`,
+          conversation_id: conversationId,
+          role: 'assistant',
+          content: aiContent,
+          created_at: new Date().toISOString(),
+        };
+        setMessages(prev => [...prev, aiMsg]);
+
+        // Save AI message to database
+        const { data: savedAiMsg, error: aiErr } = await supabase
+          .from('ai_messages')
+          .insert({ conversation_id: conversationId, role: 'assistant', content: aiContent })
+          .select()
+          .single();
+
+        if (!aiErr && savedAiMsg) {
+          setMessages(prev => prev.map(m => (m.id === aiMsg.id ? savedAiMsg : m)));
+        }
+
+        // Update conversation timestamp
+        await supabase
+          .from('ai_conversations')
+          .update({ updated_at: new Date().toISOString() })
+          .eq('id', conversationId);
+
+        // Refresh conversations list
+        fetchConversations();
+      } catch (err) {
+        console.error('Error in sendMessage:', err);
+        setError('Erro ao processar mensagem');
+      }
+    },
+    [
+      user?.id,
+      currentConversation,
+      createConversation,
+      profile?.type,
+      userStats,
+      userModules,
+      fetchConversations,
+      uploadFile,
+    ]
+  );
+
+  // Select a conversation from history
   const selectConversation = useCallback(
     async (conversation: AIConversation) => {
       setCurrentConversation(conversation);
       setMessages([]);
+      setError(null);
       await fetchMessages(conversation.id);
     },
     [fetchMessages]
   );
 
-  // Delete conversation
+  // Delete a conversation
   const deleteConversation = useCallback(
     async (conversationId: string) => {
-      // Optimistic update
-      setConversations(prev => prev.filter(c => c.id !== conversationId));
-      dataCache.update<AIConversation[]>(conversationsCacheKey, current =>
-        (current || []).filter(c => c.id !== conversationId)
-      );
-
-      if (currentConversation?.id === conversationId) {
-        setCurrentConversation(null);
-        setMessages([]);
-      }
-
       try {
-        const { error: deleteError } = await supabase
-          .from('ai_conversations')
-          .delete()
-          .eq('id', conversationId);
+        // Delete messages first
+        await supabase.from('ai_messages').delete().eq('conversation_id', conversationId);
+        // Delete conversation
+        await supabase.from('ai_conversations').delete().eq('id', conversationId);
 
-        if (deleteError) {
-          console.error('Error deleting conversation:', deleteError);
-          setError('Erro ao excluir conversa');
-          fetchConversations(true); // Revert on error
+        // Update local state
+        setConversations(prev => prev.filter(c => c.id !== conversationId));
+        if (currentConversation?.id === conversationId) {
+          setCurrentConversation(null);
+          setMessages([]);
         }
       } catch (err) {
         console.error('Error deleting conversation:', err);
         setError('Erro ao excluir conversa');
-        fetchConversations(true); // Revert on error
       }
     },
-    [currentConversation?.id, conversationsCacheKey, fetchConversations]
+    [currentConversation?.id]
   );
 
-  // Clear current conversation (start new chat)
+  // Save feedback for a message
+  const saveFeedback = useCallback(async (messageId: string, feedback: 'up' | 'down' | null) => {
+    try {
+      await supabase.from('ai_messages').update({ metadata: { feedback } }).eq('id', messageId);
+    } catch (err) {
+      console.error('Error saving feedback:', err);
+    }
+  }, []);
+
+  // Clear current conversation (start new)
   const clearConversation = useCallback(() => {
     setCurrentConversation(null);
     setMessages([]);
+    setError(null);
   }, []);
+
+  // Get module-based actions
+  const getModuleActions = useCallback((): ModuleAction[] => {
+    const actions: ModuleAction[] = [];
+
+    if (userModules.includes('shop')) {
+      actions.push({
+        id: 'shop',
+        moduleSlug: 'shop',
+        moduleName: 'Shop',
+        icon: 'ShoppingBag',
+        label: 'Vendas',
+        prompt: 'Analise minhas vendas e me dê insights',
+        color: '#8b5cf6',
+      });
+    }
+    if (userModules.includes('class')) {
+      actions.push({
+        id: 'class',
+        moduleSlug: 'class',
+        moduleName: 'Class',
+        icon: 'GraduationCap',
+        label: 'Estudar',
+        prompt: 'Crie um plano de estudos para mim',
+        color: '#10b981',
+      });
+    }
+    if (userModules.includes('work')) {
+      actions.push({
+        id: 'work',
+        moduleSlug: 'work',
+        moduleName: 'Work',
+        icon: 'CheckSquare',
+        label: 'Tarefas',
+        prompt: 'Me ajude a organizar minhas tarefas',
+        color: '#f59e0b',
+      });
+    }
+    if (userModules.includes('social')) {
+      actions.push({
+        id: 'social',
+        moduleSlug: 'social',
+        moduleName: 'Social',
+        icon: 'Users',
+        label: 'Social',
+        prompt: 'Me ajude a criar conteúdo',
+        color: '#ec4899',
+      });
+    }
+
+    // Always add help
+    actions.push({
+      id: 'help',
+      moduleSlug: 'general',
+      moduleName: 'Geral',
+      icon: 'HelpCircle',
+      label: 'Ajuda',
+      prompt: 'O que você pode fazer?',
+      color: '#6366f1',
+    });
+
+    return actions.slice(0, 4);
+  }, [userModules]);
 
   // Initial load
   useEffect(() => {
     if (user?.id) {
-      // Only show loading if no cached data
-      if (!dataCache.has(conversationsCacheKey)) {
-        setLoading(true);
-      }
-      setError(null);
-      Promise.all([fetchConversations(), fetchSuggestions(), fetchUserStats()]).finally(() =>
+      setLoading(true);
+      Promise.all([fetchConversations(), fetchUserStats(), fetchUserModules()]).finally(() =>
         setLoading(false)
       );
-
-      // Subscribe to cache updates
-      const unsubConv = dataCache.subscribe<AIConversation[]>(
-        conversationsCacheKey,
-        setConversations
-      );
-      const unsubSugg = dataCache.subscribe<AISuggestion[]>(suggestionsCacheKey, setSuggestions);
-
-      return () => {
-        unsubConv();
-        unsubSugg();
-      };
     } else {
       setLoading(false);
     }
-  }, [
-    user?.id,
-    fetchConversations,
-    fetchSuggestions,
-    fetchUserStats,
-    conversationsCacheKey,
-    suggestionsCacheKey,
-  ]);
-
-  // Subscribe to realtime updates for messages
-  useEffect(() => {
-    if (!currentConversation?.id) return;
-
-    const channel = supabase
-      .channel(`ai_messages:${currentConversation.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'ai_messages',
-          filter: `conversation_id=eq.${currentConversation.id}`,
-        },
-        payload => {
-          const newMessage = payload.new as AIMessage;
-          setMessages(prev => {
-            // Avoid duplicates
-            if (prev.some(m => m.id === newMessage.id)) return prev;
-            return [...prev, newMessage];
-          });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [currentConversation?.id]);
+  }, [user?.id, fetchConversations, fetchUserStats, fetchUserModules]);
 
   return {
     conversations,
     currentConversation,
     messages,
-    suggestions,
     userStats,
+    userModules,
     loading,
     error,
     sendMessage,
     createConversation,
     selectConversation,
     deleteConversation,
-    dismissSuggestion,
     clearConversation,
-    logActivity,
+    saveFeedback,
+    getModuleActions,
     profile,
   };
 }
 
-// Helper function to generate contextual AI responses
+// Generate AI responses
 function generateAIResponse(
-  userMessage: string,
+  message: string,
   profileType: string,
-  stats: UserStats | null
+  stats: UserStats | null,
+  modules: string[]
 ): string {
-  const lowerMessage = userMessage.toLowerCase();
+  const lower = message.toLowerCase();
+  const isBusiness = profileType === 'BUSINESS';
 
-  // Business-specific responses
-  if (profileType === 'BUSINESS') {
-    if (lowerMessage.includes('venda') || lowerMessage.includes('produto')) {
-      return `Analisando seus dados de vendas... ${stats?.totalPurchases ? `Você tem ${stats.totalPurchases} produtos cadastrados.` : ''} Posso ajudar com estratégias de precificação, análise de mercado ou otimização do seu catálogo. O que prefere explorar?`;
+  // Shop
+  if (lower.includes('venda') || lower.includes('produto') || lower.includes('loja')) {
+    if (modules.includes('shop')) {
+      return `📊 **Análise da Loja**\n\n${stats?.totalProducts ? `Você tem ${stats.totalProducts} produtos cadastrados.` : 'Nenhum produto cadastrado ainda.'}\n${stats?.totalOrders ? `${stats.totalOrders} pedidos realizados.` : ''}\n\n**Sugestões:**\n• Adicione fotos de qualidade\n• Revise os preços\n• Crie promoções\n\nPosso ajudar com algo específico?`;
     }
-    if (lowerMessage.includes('equipe') || lowerMessage.includes('funcionário')) {
-      return 'Para gestão de equipe, recomendo utilizar o módulo Work. Lá você pode atribuir tarefas, acompanhar produtividade e gerenciar projetos. Quer que eu explique como configurar?';
-    }
-    if (lowerMessage.includes('marketing') || lowerMessage.includes('campanha')) {
-      return 'No módulo Social, você tem acesso a ferramentas de campanhas e analytics. Posso ajudar a criar uma estratégia de conteúdo ou analisar o engajamento das suas publicações.';
-    }
-    if (lowerMessage.includes('relatório') || lowerMessage.includes('dashboard')) {
-      return 'Posso gerar relatórios personalizados sobre vendas, engajamento e performance. Qual período você gostaria de analisar?';
-    }
+    return 'Ative o módulo Shop nas configurações para gerenciar produtos e vendas.';
   }
 
-  // Personal-specific responses
-  if (profileType === 'PERSONAL') {
-    if (
-      lowerMessage.includes('curso') ||
-      lowerMessage.includes('aprender') ||
-      lowerMessage.includes('estudar')
-    ) {
-      return `${stats?.totalCourses ? `Você está matriculado em ${stats.totalCourses} cursos.` : 'Você ainda não começou nenhum curso.'} Posso recomendar cursos baseados nos seus interesses ou ajudar a organizar seu plano de estudos. O que te interessa aprender?`;
+  // Class
+  if (lower.includes('curso') || lower.includes('estudar') || lower.includes('aprender')) {
+    if (modules.includes('class')) {
+      return `📚 **Estudos**\n\n${stats?.totalCourses ? `Você está em ${stats.totalCourses} cursos.` : 'Nenhum curso iniciado.'}\n\n**Dicas:**\n• Defina metas diárias\n• Faça anotações\n• Pratique regularmente\n\nQuer recomendações de cursos?`;
     }
-    if (
-      lowerMessage.includes('tarefa') ||
-      lowerMessage.includes('organizar') ||
-      lowerMessage.includes('agenda')
-    ) {
-      return `${stats?.completedTasks ? `Parabéns! Você já completou ${stats.completedTasks} tarefas.` : ''} Posso ajudar a priorizar suas atividades ou criar um cronograma personalizado. Quer começar?`;
+    return 'Ative o módulo Class para acessar cursos.';
+  }
+
+  // Work
+  if (lower.includes('tarefa') || lower.includes('projeto') || lower.includes('organizar')) {
+    if (modules.includes('work')) {
+      return `✅ **Tarefas**\n\n${stats?.completedTasks ? `${stats.completedTasks} tarefas concluídas!` : 'Comece organizando suas tarefas.'}\n\n**Dicas:**\n• Priorize por urgência\n• Divida em etapas menores\n• Use a técnica Pomodoro\n\nPosso criar um plano?`;
     }
-    if (
-      lowerMessage.includes('comprar') ||
-      lowerMessage.includes('loja') ||
-      lowerMessage.includes('produto')
-    ) {
-      return 'Posso ajudar você a encontrar os melhores produtos na nossa loja! Está procurando algo específico ou quer ver as novidades?';
+    return 'Ative o módulo Work para gerenciar tarefas.';
+  }
+
+  // Social
+  if (lower.includes('social') || lower.includes('conteúdo') || lower.includes('post')) {
+    if (modules.includes('social')) {
+      return `💬 **Social**\n\n${stats?.totalPosts ? `${stats.totalPosts} publicações.` : 'Comece a publicar!'}\n\n**Estratégias:**\n• Publique regularmente\n• Interaja com a comunidade\n• Compartilhe conhecimento\n\nQuer ideias de conteúdo?`;
     }
+    return 'Ative o módulo Social para conectar-se.';
   }
 
-  // Generic responses
-  if (
-    lowerMessage.includes('ajuda') ||
-    lowerMessage.includes('help') ||
-    lowerMessage.includes('o que você pode')
-  ) {
-    return profileType === 'BUSINESS'
-      ? 'Posso ajudar com: 📊 Análise de vendas e métricas\n👥 Gestão de equipe e tarefas\n📱 Estratégias de marketing\n📈 Relatórios e dashboards\n🛒 Gestão de produtos\n\nSobre o que gostaria de saber mais?'
-      : 'Posso ajudar com: ✅ Organização de tarefas\n📚 Recomendações de cursos\n🛍️ Dicas de compras\n📅 Gestão de agenda\n💡 Sugestões personalizadas\n\nComo posso ser útil?';
+  // Help
+  if (lower.includes('ajuda') || lower.includes('o que você pode') || lower.includes('help')) {
+    const mods = modules.length > 0 ? modules.join(', ') : 'nenhum ativo';
+    return `👋 **Olá! Sou a Tymes AI**\n\nPosso ajudar com:\n${modules.includes('shop') ? '• 🛒 Vendas e produtos\n' : ''}${modules.includes('class') ? '• 📚 Cursos e estudos\n' : ''}${modules.includes('work') ? '• ✅ Tarefas e projetos\n' : ''}${modules.includes('social') ? '• 💬 Conteúdo e conexões\n' : ''}• 📊 Análises gerais\n\n**Módulos ativos:** ${mods}\n\nComo posso ajudar?`;
   }
 
-  if (
-    lowerMessage.includes('olá') ||
-    lowerMessage.includes('oi') ||
-    lowerMessage.includes('bom dia') ||
-    lowerMessage.includes('boa tarde') ||
-    lowerMessage.includes('boa noite')
-  ) {
-    const greeting =
-      profileType === 'BUSINESS'
-        ? `Olá! 👋 Sou seu assistente de negócios. ${stats?.totalPurchases ? `Vi que você tem ${stats.totalPurchases} produtos na loja.` : ''} Como posso ajudar a impulsionar seu negócio hoje?`
-        : `Olá! 👋 Sou seu assistente pessoal. ${stats?.totalCourses ? `Você está progredindo bem nos seus ${stats.totalCourses} cursos!` : ''} Em que posso ajudar?`;
-    return greeting;
+  // Greetings
+  if (lower.match(/^(oi|olá|ola|hey|bom dia|boa tarde|boa noite)/)) {
+    return isBusiness
+      ? `Olá! 👋 Sou a Tymes AI.\n\n${stats?.totalProducts ? `Vi que você tem ${stats.totalProducts} produtos.` : ''} Como posso ajudar seu negócio?`
+      : `Olá! 👋 Sou a Tymes AI.\n\nEstou aqui para ajudar. O que precisa?`;
   }
 
-  if (
-    lowerMessage.includes('obrigado') ||
-    lowerMessage.includes('valeu') ||
-    lowerMessage.includes('thanks')
-  ) {
-    return 'Por nada! 😊 Estou aqui sempre que precisar. Tem mais alguma dúvida?';
+  // Thanks
+  if (lower.match(/(obrigad|valeu|thanks)/)) {
+    return 'Por nada! 😊 Precisa de mais alguma coisa?';
   }
 
-  // Default response with context
-  const contextualHint =
-    profileType === 'BUSINESS'
-      ? 'Posso ajudar com vendas, marketing, gestão de equipe ou análise de dados.'
-      : 'Posso ajudar com estudos, organização, compras ou recomendações.';
-
-  return `Entendi sua mensagem! ${contextualHint}\n\n💡 Dica: Em breve terei integração com IA avançada para respostas ainda mais personalizadas. Por enquanto, posso ajudar com as funcionalidades básicas da plataforma.`;
+  // Default
+  return `Entendi! Posso ajudar com ${modules.length > 0 ? modules.join(', ') : 'diversas funcionalidades'}.\n\n💡 Seja mais específico para eu ajudar melhor. Exemplos:\n• "Analise minhas vendas"\n• "Organize minhas tarefas"\n• "Sugira cursos"`;
 }

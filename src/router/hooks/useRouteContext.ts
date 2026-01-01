@@ -73,8 +73,8 @@ export function useContextualNavigation() {
       });
     }
 
-    // Use hash router
-    window.location.hash = path;
+    // Use browser router
+    window.location.href = path;
   };
 
   const navigateToModule = (module: ModuleSlug) => navigate(module);
@@ -174,10 +174,10 @@ function getFeatureLabel(feature: string): string {
   const labels: Record<string, string> = {
     browse: 'Explorar',
     inventory: 'Inventário',
-    cart: 'Carrinho',
+    cart: 'Bolsa',
     checkout: 'Checkout',
     orders: 'Pedidos',
-    favorites: 'Favoritos',
+    saves: 'Salvos',
     offers: 'Ofertas',
     sales: 'Vendas',
     analytics: 'Analytics',

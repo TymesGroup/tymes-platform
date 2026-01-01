@@ -466,7 +466,7 @@ export function useOrders() {
       .eq('user_id', user.id);
 
     if (cartError) throw cartError;
-    if (!cartItems?.length) throw new Error('Carrinho vazio');
+    if (!cartItems?.length) throw new Error('Bolsa vazia');
 
     const total = cartItems.reduce(
       (sum, item: any) => sum + (item.products?.price || 0) * (item.quantity || 1),

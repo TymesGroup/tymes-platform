@@ -2,7 +2,7 @@
  * useAccountStorage Hook
  *
  * Manages saved accounts and encrypted credentials
- * Handles multi-account functionality
+ * Uses localStorage only (no cookies) for consistency
  */
 
 import { useCallback } from 'react';
@@ -40,7 +40,11 @@ export function loadAccounts(): StoredAccount[] {
  * Save accounts to localStorage
  */
 export function saveAccounts(accounts: StoredAccount[]): void {
-  localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
+  try {
+    localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
+  } catch {
+    // Ignore storage errors
+  }
 }
 
 /**
@@ -90,39 +94,49 @@ export function removeCredentials(id: string): void {
 }
 
 /**
- * Clear all stored data
+ * Clear all stored data - uses localStorage only
  */
 export function clearAllStoredData(): void {
-  localStorage.removeItem(ACCOUNTS_KEY);
-  localStorage.removeItem(CREDENTIALS_KEY);
-  localStorage.removeItem('tymes_last_activity');
-  localStorage.removeItem('tymes_user_preferences');
-  localStorage.removeItem('tymes_analytics');
+  // Keys to remove
+  const keysToRemove = [
+    ACCOUNTS_KEY,
+    CREDENTIALS_KEY,
+    'tymes_last_activity',
+    'tymes_user_preferences',
+    'tymes_analytics',
+    'tymes-auth-token',
+    'tymes-session-version',
+    'tymes_cache_version',
+  ];
+
+  keysToRemove.forEach(key => {
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      // Ignore errors
+    }
+  });
 
   // Clear encryption key
   clearEncryptionKey();
 
   // Clear Supabase items
-  Object.keys(localStorage).forEach(key => {
-    if (key.startsWith('sb-') || key.startsWith('tymes-')) {
-      localStorage.removeItem(key);
-    }
-  });
-
-  // Clear cookies
-  const cookiesToClear = [
-    'tymes-auth-token',
-    'tymes_last_activity',
-    'tymes_user_preferences',
-    'tymes_session_id',
-  ];
-
-  cookiesToClear.forEach(name => {
-    document.cookie = `${name}=; path=/; max-age=0;`;
-  });
+  try {
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('sb-') || key.startsWith('tymes-')) {
+        localStorage.removeItem(key);
+      }
+    });
+  } catch {
+    // Ignore errors
+  }
 
   // Clear sessionStorage
-  sessionStorage.clear();
+  try {
+    sessionStorage.clear();
+  } catch {
+    // Ignore errors
+  }
 }
 
 /**

@@ -14,7 +14,7 @@ import {
   ArrowUpRight,
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
-import { useAuth } from '../../../lib/useAuth';
+import { useAuth } from '../../../lib/AuthContext';
 import { SectionHeader } from '../../../components/ui/SectionHeader';
 import { ProfileType } from '../../../types';
 

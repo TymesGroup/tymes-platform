@@ -13,6 +13,7 @@ interface SocialModuleProps {
   profile?: ProfileType;
   onNavigate?: (page: string) => void;
   userId?: string;
+  itemId?: string; // For consistency with other modules
 }
 
 export const SocialModule: React.FC<SocialModuleProps> = ({
@@ -20,6 +21,7 @@ export const SocialModule: React.FC<SocialModuleProps> = ({
   profile = ProfileType.PERSONAL,
   onNavigate,
   userId,
+  itemId,
 }) => {
   switch (page) {
     case 'OVERVIEW':

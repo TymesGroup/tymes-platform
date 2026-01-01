@@ -286,6 +286,61 @@ export type Database = {
           },
         ];
       };
+      course_enrollments: {
+        Row: {
+          completed_at: string | null;
+          course_id: string;
+          enrolled_at: string | null;
+          expires_at: string | null;
+          id: string;
+          order_id: string | null;
+          status: string | null;
+          user_id: string;
+        };
+        Insert: {
+          completed_at?: string | null;
+          course_id: string;
+          enrolled_at?: string | null;
+          expires_at?: string | null;
+          id?: string;
+          order_id?: string | null;
+          status?: string | null;
+          user_id: string;
+        };
+        Update: {
+          completed_at?: string | null;
+          course_id?: string;
+          enrolled_at?: string | null;
+          expires_at?: string | null;
+          id?: string;
+          order_id?: string | null;
+          status?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'course_enrollments_course_id_fkey';
+            columns: ['course_id'];
+            isOneToOne: false;
+            referencedRelation: 'courses';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'course_enrollments_order_id_fkey';
+            columns: ['order_id'];
+            isOneToOne: false;
+            referencedRelation: 'unified_orders';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'course_enrollments_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       course_progress: {
         Row: {
           course_id: string | null;
@@ -327,28 +382,70 @@ export type Database = {
       };
       courses: {
         Row: {
+          category: string | null;
           created_at: string | null;
           created_by: string | null;
+          description: string | null;
+          duration: string | null;
           id: string;
           instructor: string;
+          is_bestseller: boolean | null;
+          language: string | null;
+          level: string | null;
+          original_price: number | null;
+          price: number | null;
+          rating: number | null;
+          status: string | null;
+          students_count: number | null;
           thumbnail: string | null;
           title: string;
+          total_reviews: number | null;
+          updated_at: string | null;
+          video_url: string | null;
         };
         Insert: {
+          category?: string | null;
           created_at?: string | null;
           created_by?: string | null;
+          description?: string | null;
+          duration?: string | null;
           id?: string;
           instructor: string;
+          is_bestseller?: boolean | null;
+          language?: string | null;
+          level?: string | null;
+          original_price?: number | null;
+          price?: number | null;
+          rating?: number | null;
+          status?: string | null;
+          students_count?: number | null;
           thumbnail?: string | null;
           title: string;
+          total_reviews?: number | null;
+          updated_at?: string | null;
+          video_url?: string | null;
         };
         Update: {
+          category?: string | null;
           created_at?: string | null;
           created_by?: string | null;
+          description?: string | null;
+          duration?: string | null;
           id?: string;
           instructor?: string;
+          is_bestseller?: boolean | null;
+          language?: string | null;
+          level?: string | null;
+          original_price?: number | null;
+          price?: number | null;
+          rating?: number | null;
+          status?: string | null;
+          students_count?: number | null;
           thumbnail?: string | null;
           title?: string;
+          total_reviews?: number | null;
+          updated_at?: string | null;
+          video_url?: string | null;
         };
         Relationships: [
           {
@@ -364,29 +461,25 @@ export type Database = {
         Row: {
           created_at: string | null;
           id: string;
-          product_id: string;
+          item_id: string;
+          item_type: string | null;
           user_id: string;
         };
         Insert: {
           created_at?: string | null;
           id?: string;
-          product_id: string;
+          item_id: string;
+          item_type?: string | null;
           user_id: string;
         };
         Update: {
           created_at?: string | null;
           id?: string;
-          product_id?: string;
+          item_id?: string;
+          item_type?: string | null;
           user_id?: string;
         };
         Relationships: [
-          {
-            foreignKeyName: 'favorites_product_id_fkey';
-            columns: ['product_id'];
-            isOneToOne: false;
-            referencedRelation: 'products';
-            referencedColumns: ['id'];
-          },
           {
             foreignKeyName: 'favorites_user_id_fkey';
             columns: ['user_id'];
@@ -1411,6 +1504,121 @@ export type Database = {
           },
         ];
       };
+      search_history: {
+        Row: {
+          clicked: boolean | null;
+          created_at: string | null;
+          id: string;
+          module: string | null;
+          query: string;
+          result_id: string | null;
+          result_title: string | null;
+          result_type: string | null;
+          results_count: number | null;
+          user_id: string;
+        };
+        Insert: {
+          clicked?: boolean | null;
+          created_at?: string | null;
+          id?: string;
+          module?: string | null;
+          query: string;
+          result_id?: string | null;
+          result_title?: string | null;
+          result_type?: string | null;
+          results_count?: number | null;
+          user_id: string;
+        };
+        Update: {
+          clicked?: boolean | null;
+          created_at?: string | null;
+          id?: string;
+          module?: string | null;
+          query?: string;
+          result_id?: string | null;
+          result_title?: string | null;
+          result_type?: string | null;
+          results_count?: number | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'search_history_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      service_contracts: {
+        Row: {
+          created_at: string | null;
+          delivery_date: string | null;
+          freelancer_id: string;
+          id: string;
+          order_id: string | null;
+          requirements: string | null;
+          service_id: string;
+          status: string | null;
+          updated_at: string | null;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string | null;
+          delivery_date?: string | null;
+          freelancer_id: string;
+          id?: string;
+          order_id?: string | null;
+          requirements?: string | null;
+          service_id: string;
+          status?: string | null;
+          updated_at?: string | null;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string | null;
+          delivery_date?: string | null;
+          freelancer_id?: string;
+          id?: string;
+          order_id?: string | null;
+          requirements?: string | null;
+          service_id?: string;
+          status?: string | null;
+          updated_at?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'service_contracts_freelancer_id_fkey';
+            columns: ['freelancer_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'service_contracts_order_id_fkey';
+            columns: ['order_id'];
+            isOneToOne: false;
+            referencedRelation: 'unified_orders';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'service_contracts_service_id_fkey';
+            columns: ['service_id'];
+            isOneToOne: false;
+            referencedRelation: 'products';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'service_contracts_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       stores: {
         Row: {
           banner_url: string | null;
@@ -1540,6 +1748,142 @@ export type Database = {
           },
           {
             foreignKeyName: 'tasks_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      unified_cart_items: {
+        Row: {
+          created_at: string | null;
+          id: string;
+          item_id: string;
+          item_type: string;
+          quantity: number | null;
+          updated_at: string | null;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string | null;
+          id?: string;
+          item_id: string;
+          item_type: string;
+          quantity?: number | null;
+          updated_at?: string | null;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string | null;
+          id?: string;
+          item_id?: string;
+          item_type?: string;
+          quantity?: number | null;
+          updated_at?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'unified_cart_items_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      unified_order_items: {
+        Row: {
+          created_at: string | null;
+          id: string;
+          item_id: string;
+          item_image: string | null;
+          item_name: string;
+          item_type: string;
+          order_id: string;
+          quantity: number | null;
+          seller_id: string | null;
+          unit_price: number;
+        };
+        Insert: {
+          created_at?: string | null;
+          id?: string;
+          item_id: string;
+          item_image?: string | null;
+          item_name: string;
+          item_type: string;
+          order_id: string;
+          quantity?: number | null;
+          seller_id?: string | null;
+          unit_price: number;
+        };
+        Update: {
+          created_at?: string | null;
+          id?: string;
+          item_id?: string;
+          item_image?: string | null;
+          item_name?: string;
+          item_type?: string;
+          order_id?: string;
+          quantity?: number | null;
+          seller_id?: string | null;
+          unit_price?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'unified_order_items_order_id_fkey';
+            columns: ['order_id'];
+            isOneToOne: false;
+            referencedRelation: 'unified_orders';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'unified_order_items_seller_id_fkey';
+            columns: ['seller_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      unified_orders: {
+        Row: {
+          created_at: string | null;
+          id: string;
+          notes: string | null;
+          payment_id: string | null;
+          payment_method: string | null;
+          status: string | null;
+          total_amount: number;
+          updated_at: string | null;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string | null;
+          id?: string;
+          notes?: string | null;
+          payment_id?: string | null;
+          payment_method?: string | null;
+          status?: string | null;
+          total_amount?: number;
+          updated_at?: string | null;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string | null;
+          id?: string;
+          notes?: string | null;
+          payment_id?: string | null;
+          payment_method?: string | null;
+          status?: string | null;
+          total_amount?: number;
+          updated_at?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'unified_orders_user_id_fkey';
             columns: ['user_id'];
             isOneToOne: false;
             referencedRelation: 'profiles';

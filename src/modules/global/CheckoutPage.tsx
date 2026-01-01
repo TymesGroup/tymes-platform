@@ -18,9 +18,10 @@ import {
   Plus,
   Star,
   Trash2,
+  GraduationCap,
+  AlertCircle,
 } from 'lucide-react';
-import { useCheckout, ShippingAddress } from '../../lib/CheckoutContext';
-import { useCart } from '../../lib/CartContext';
+import { useCheckout, ShippingAddress, CombinedBagItem } from '../../lib/CheckoutContext';
 import { useAuth } from '../../lib/AuthContext';
 import { SectionHeader } from '../../components/ui/SectionHeader';
 import { addressService, UserAddress, CreateAddressData } from '../../lib/addressService';
@@ -75,7 +76,6 @@ const PAYMENT_METHODS = [
 
 export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack, onSuccess }) => {
   const { user, profile } = useAuth();
-  const { items, totalAmount, clearCart } = useCart();
   const {
     step,
     setStep,
@@ -86,10 +86,28 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack, onSuccess })
     notes,
     setNotes,
     createOrder,
+    processPayment,
     loading,
     error,
     orderId,
+    allItems,
+    combinedTotalAmount,
+    combinedTotalItems,
+    hasPhysicalProducts,
+    hasDigitalItems,
+    resetCheckout,
   } = useCheckout();
+
+  // Reset checkout to initial state when page mounts
+  // This ensures a fresh checkout flow every time the user navigates to this page
+  useEffect(() => {
+    // If step is success or processing (from a previous order), reset to start fresh
+    // This prevents showing the success/processing screen from a previous completed order
+    if (step === 'success' || step === 'processing') {
+      resetCheckout();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Estados para endereços salvos
   const [savedAddresses, setSavedAddresses] = useState<UserAddress[]>([]);
@@ -151,6 +169,28 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack, onSuccess })
       setAddressForm(shippingAddress);
     }
   }, [shippingAddress]);
+
+  // Se só tem itens digitais, pula direto para pagamento
+  useEffect(() => {
+    if (!hasPhysicalProducts && hasDigitalItems && step === 'address') {
+      setStep('payment');
+    }
+  }, [hasPhysicalProducts, hasDigitalItems, step, setStep]);
+
+  // Track if payment processing has been initiated
+  const processingInitiated = React.useRef(false);
+
+  // Auto-process payment when entering processing step
+  useEffect(() => {
+    if (step === 'processing' && !processingInitiated.current) {
+      processingInitiated.current = true;
+      processPayment();
+    }
+    // Reset flag when leaving processing step
+    if (step !== 'processing') {
+      processingInitiated.current = false;
+    }
+  }, [step, processPayment]);
 
   // Selecionar um endereço salvo
   const handleSelectAddress = (address: UserAddress) => {
@@ -283,76 +323,89 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack, onSuccess })
   };
 
   const handleConfirmOrder = async () => {
-    const success = await createOrder();
-    if (success) {
-      onSuccess();
-    }
+    await createOrder();
+    // Don't call onSuccess here - let the flow go through processing -> success steps
   };
 
-  // Se não há itens no carrinho, mostrar mensagem
-  if (items.length === 0 && step !== 'success') {
+  // Se não há itens na bolsa, mostrar mensagem
+  if (allItems.length === 0 && step !== 'success' && step !== 'processing') {
     return (
       <div className="animate-in fade-in duration-500">
         <SectionHeader title="Checkout" subtitle="Finalize sua compra" />
-        <div className="flex flex-col items-center justify-center py-16 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800">
-          <ShoppingBag size={64} className="text-zinc-300 dark:text-zinc-700 mb-4" />
-          <h3 className="text-xl font-bold mb-2">Carrinho vazio</h3>
-          <p className="text-zinc-500 mb-6">Adicione produtos ao carrinho para continuar</p>
-          <button
-            onClick={onBack}
-            className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors"
-          >
-            Voltar às compras
-          </button>
+
+        {/* Empty State */}
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+          <div className="flex flex-col items-center justify-center py-16">
+            <ShoppingBag size={64} className="text-zinc-300 dark:text-zinc-700 mb-4" />
+            <h3 className="text-xl font-bold mb-2">Bolsa vazia</h3>
+            <p className="text-zinc-500 mb-6">Adicione produtos à bolsa para continuar</p>
+            <button
+              onClick={onBack}
+              className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors"
+            >
+              Voltar às compras
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
-  const renderStepIndicator = () => (
-    <div className="flex items-center justify-center gap-2 mb-8">
-      {[
-        { key: 'address', label: 'Endereço', icon: MapPin },
-        { key: 'payment', label: 'Pagamento', icon: CreditCard },
-        { key: 'review', label: 'Revisão', icon: FileText },
-      ].map((s, i) => {
-        const StepIcon = s.icon;
-        const isActive = step === s.key;
-        const isCompleted =
-          ['address', 'payment', 'review'].indexOf(step) > i || step === 'success';
+  const renderStepIndicator = () => {
+    // Se só tem itens digitais, pula o step de endereço
+    const steps = hasPhysicalProducts
+      ? [
+          { key: 'address', label: 'Endereço', icon: MapPin },
+          { key: 'payment', label: 'Pagamento', icon: CreditCard },
+          { key: 'review', label: 'Revisão', icon: FileText },
+        ]
+      : [
+          { key: 'payment', label: 'Pagamento', icon: CreditCard },
+          { key: 'review', label: 'Revisão', icon: FileText },
+        ];
 
-        return (
-          <React.Fragment key={s.key}>
-            <div className="flex flex-col items-center">
-              <div
-                className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
-                  isActive
-                    ? 'bg-indigo-600 text-white'
-                    : isCompleted
-                      ? 'bg-green-500 text-white'
-                      : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-500'
-                }`}
-              >
-                {isCompleted && !isActive ? <CheckCircle size={20} /> : <StepIcon size={20} />}
+    const currentStepIndex = steps.findIndex(s => s.key === step);
+
+    return (
+      <div className="flex items-center justify-center gap-2 mb-8">
+        {steps.map((s, i) => {
+          const StepIcon = s.icon;
+          const isActive = step === s.key;
+          const isCompleted = currentStepIndex > i || step === 'success';
+
+          return (
+            <React.Fragment key={s.key}>
+              <div className="flex flex-col items-center">
+                <div
+                  className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+                    isActive
+                      ? 'bg-indigo-600 text-white'
+                      : isCompleted
+                        ? 'bg-green-500 text-white'
+                        : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-500'
+                  }`}
+                >
+                  {isCompleted && !isActive ? <CheckCircle size={20} /> : <StepIcon size={20} />}
+                </div>
+                <span
+                  className={`text-xs mt-2 font-medium ${isActive ? 'text-indigo-600' : 'text-zinc-500'}`}
+                >
+                  {s.label}
+                </span>
               </div>
-              <span
-                className={`text-xs mt-2 font-medium ${isActive ? 'text-indigo-600' : 'text-zinc-500'}`}
-              >
-                {s.label}
-              </span>
-            </div>
-            {i < 2 && (
-              <div
-                className={`w-16 h-1 rounded-full mb-6 ${
-                  isCompleted ? 'bg-green-500' : 'bg-zinc-200 dark:bg-zinc-700'
-                }`}
-              />
-            )}
-          </React.Fragment>
-        );
-      })}
-    </div>
-  );
+              {i < steps.length - 1 && (
+                <div
+                  className={`w-16 h-1 rounded-full mb-6 ${
+                    isCompleted ? 'bg-green-500' : 'bg-zinc-200 dark:bg-zinc-700'
+                  }`}
+                />
+              )}
+            </React.Fragment>
+          );
+        })}
+      </div>
+    );
+  };
 
   const renderAddressStep = () => (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -771,7 +824,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack, onSuccess })
 
           <div className="flex gap-4 pt-6">
             <button
-              onClick={() => setStep('address')}
+              onClick={() => (hasPhysicalProducts ? setStep('address') : onBack())}
               className="flex-1 py-3 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 font-medium rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all flex items-center justify-center gap-2"
             >
               <ArrowLeft size={18} />
@@ -796,29 +849,44 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack, onSuccess })
   const renderReviewStep = () => (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <div className="lg:col-span-2 space-y-6">
-        {/* Address Review */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <MapPin className="w-5 h-5 text-indigo-600" />
-              <h4 className="font-bold">Endereço de Entrega</h4>
+        {/* Address Review - only for physical products */}
+        {hasPhysicalProducts && (
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <MapPin className="w-5 h-5 text-indigo-600" />
+                <h4 className="font-bold">Endereço de Entrega</h4>
+              </div>
+              <button
+                onClick={() => setStep('address')}
+                className="text-sm text-indigo-600 hover:underline"
+              >
+                Alterar
+              </button>
             </div>
-            <button
-              onClick={() => setStep('address')}
-              className="text-sm text-indigo-600 hover:underline"
-            >
-              Alterar
-            </button>
+            <p className="text-zinc-600 dark:text-zinc-400">
+              {shippingAddress?.street}, {shippingAddress?.number}
+              {shippingAddress?.complement && ` - ${shippingAddress.complement}`}
+              <br />
+              {shippingAddress?.neighborhood}, {shippingAddress?.city} - {shippingAddress?.state}
+              <br />
+              CEP: {shippingAddress?.zip_code}
+            </p>
           </div>
-          <p className="text-zinc-600 dark:text-zinc-400">
-            {shippingAddress?.street}, {shippingAddress?.number}
-            {shippingAddress?.complement && ` - ${shippingAddress.complement}`}
-            <br />
-            {shippingAddress?.neighborhood}, {shippingAddress?.city} - {shippingAddress?.state}
-            <br />
-            CEP: {shippingAddress?.zip_code}
-          </p>
-        </div>
+        )}
+
+        {/* Digital Items Notice */}
+        {hasDigitalItems && (
+          <div className="bg-purple-50 dark:bg-purple-900/20 rounded-2xl border border-purple-200 dark:border-purple-800 p-6">
+            <div className="flex items-center gap-3 mb-2">
+              <GraduationCap className="w-5 h-5 text-purple-600" />
+              <h4 className="font-bold text-purple-700 dark:text-purple-300">Itens Digitais</h4>
+            </div>
+            <p className="text-purple-600 dark:text-purple-400 text-sm">
+              Cursos e serviços serão liberados imediatamente após a confirmação do pagamento.
+            </p>
+          </div>
+        )}
 
         {/* Payment Review */}
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6">
@@ -847,7 +915,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack, onSuccess })
             onChange={e => setNotes(e.target.value)}
             placeholder="Instruções especiais para entrega..."
             rows={3}
-            className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+            className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
           />
         </div>
 
@@ -887,94 +955,190 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack, onSuccess })
     </div>
   );
 
-  const renderSuccessStep = () => (
-    <div className="max-w-lg mx-auto text-center py-12">
-      <div className="w-24 h-24 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-6">
-        <CheckCircle className="w-12 h-12 text-green-600 dark:text-green-400" />
-      </div>
-      <h2 className="text-3xl font-bold mb-3">Pedido Confirmado!</h2>
-      <p className="text-zinc-500 mb-2">
-        Seu pedido #{orderId?.slice(0, 8)} foi realizado com sucesso.
-      </p>
-      <p className="text-zinc-500 mb-8">
-        Você receberá um email com os detalhes do pedido e informações de rastreamento.
-      </p>
+  // Modal overlay for processing and success/error states
+  const renderModal = () => {
+    if (step !== 'processing' && step !== 'success') return null;
 
-      <div className="bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl p-6 mb-8">
-        <div className="flex items-center justify-center gap-3 text-emerald-600 dark:text-emerald-400">
-          <Truck size={24} />
-          <span className="font-medium">Entrega estimada: 3-5 dias úteis</span>
-        </div>
-      </div>
+    const isProcessing = step === 'processing';
+    const hasError = !!error;
 
-      <button
-        onClick={onBack}
-        className="px-8 py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors"
-      >
-        Continuar Comprando
-      </button>
-    </div>
-  );
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        {/* Backdrop */}
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
-  const renderOrderSummary = () => (
-    <div className="lg:col-span-1">
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6 sticky top-4">
-        <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-          <Package size={20} />
-          Resumo do Pedido
-        </h3>
-
-        <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
-          {items.map(item => (
-            <div key={item.id} className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-lg bg-zinc-100 dark:bg-zinc-800 overflow-hidden flex-shrink-0">
-                {item.product?.image ? (
-                  <img src={item.product.image} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Package size={16} className="text-zinc-400" />
-                  </div>
-                )}
+        {/* Modal */}
+        <div className="relative bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden animate-in zoom-in-95 fade-in duration-200">
+          {isProcessing && !hasError ? (
+            // Processing State
+            <div className="p-8 text-center">
+              <div className="w-16 h-16 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center mx-auto mb-5">
+                <Loader2 className="w-8 h-8 text-indigo-600 dark:text-indigo-400 animate-spin" />
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{item.product?.name}</p>
-                <p className="text-xs text-zinc-500">Qtd: {item.quantity || 1}</p>
-              </div>
-              <span className="text-sm font-medium">
-                {formatPrice((item.product?.price || 0) * (item.quantity || 1))}
-              </span>
+              <h3 className="text-xl font-semibold mb-2">Processando</h3>
+              <p className="text-sm text-zinc-500">Aguarde enquanto confirmamos seu pedido...</p>
             </div>
-          ))}
+          ) : hasError ? (
+            // Error State
+            <div className="p-8 text-center">
+              <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-5">
+                <AlertCircle className="w-8 h-8 text-red-600 dark:text-red-400" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Erro no Pedido</h3>
+              <p className="text-sm text-zinc-500 mb-6">{error}</p>
+              <button
+                onClick={() => setStep('review')}
+                className="w-full py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+              >
+                Tentar Novamente
+              </button>
+            </div>
+          ) : (
+            // Success State
+            <div className="p-8 text-center">
+              <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mx-auto mb-5">
+                <CheckCircle className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Pedido Confirmado!</h3>
+              <p className="text-sm text-zinc-500 mb-1">Pedido #{orderId?.slice(0, 8)}</p>
+              <p className="text-sm text-zinc-400 mb-6">
+                {hasDigitalItems && !hasPhysicalProducts
+                  ? 'Acesso liberado! Confira seus pedidos.'
+                  : 'Você receberá atualizações por email.'}
+              </p>
+              <button
+                onClick={onSuccess}
+                className="w-full py-3 bg-emerald-600 text-white font-medium rounded-xl hover:bg-emerald-700 transition-colors"
+              >
+                Ver Meus Pedidos
+              </button>
+            </div>
+          )}
         </div>
+      </div>
+    );
+  };
 
-        <div className="border-t border-zinc-200 dark:border-zinc-700 pt-4 space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-zinc-500">Subtotal</span>
-            <span>{formatPrice(totalAmount)}</span>
+  const renderOrderSummary = () => {
+    const getItemIcon = (item: CombinedBagItem) => {
+      if (item.type === 'course') return GraduationCap;
+      if (item.type === 'service') return Briefcase;
+      return Package;
+    };
+
+    const getItemTypeLabel = (type: string) => {
+      switch (type) {
+        case 'course':
+          return 'Curso';
+        case 'service':
+          return 'Serviço';
+        default:
+          return 'Produto';
+      }
+    };
+
+    const getItemTypeColor = (type: string) => {
+      switch (type) {
+        case 'course':
+          return 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400';
+        case 'service':
+          return 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400';
+        default:
+          return 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400';
+      }
+    };
+
+    return (
+      <div className="lg:col-span-1">
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6 sticky top-24">
+          <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+            <Package size={20} />
+            Resumo do Pedido
+          </h3>
+
+          <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
+            {allItems.map(item => {
+              const ItemIcon = getItemIcon(item);
+              return (
+                <div key={item.id} className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-lg bg-zinc-100 dark:bg-zinc-800 overflow-hidden flex-shrink-0">
+                    {item.image ? (
+                      <img src={item.image} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <ItemIcon size={16} className="text-zinc-400" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-medium truncate">{item.name}</p>
+                      {item.type !== 'product' && (
+                        <span
+                          className={`text-[10px] px-1.5 py-0.5 rounded-full ${getItemTypeColor(item.type)}`}
+                        >
+                          {getItemTypeLabel(item.type)}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-zinc-500">Qtd: {item.quantity}</p>
+                  </div>
+                  <span className="text-sm font-medium">
+                    {formatPrice(item.price * item.quantity)}
+                  </span>
+                </div>
+              );
+            })}
           </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-zinc-500">Frete</span>
-            <span className="text-emerald-500">Grátis</span>
-          </div>
-          <div className="flex justify-between font-bold text-lg pt-2 border-t border-zinc-200 dark:border-zinc-700">
-            <span>Total</span>
-            <span className="text-indigo-600">{formatPrice(totalAmount)}</span>
+
+          {/* Info about digital items */}
+          {hasDigitalItems && (
+            <div className="mb-4 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+              <p className="text-xs text-purple-600 dark:text-purple-400 flex items-center gap-2">
+                <GraduationCap size={14} />
+                Itens digitais: acesso imediato após confirmação
+              </p>
+            </div>
+          )}
+
+          <div className="border-t border-zinc-200 dark:border-zinc-700 pt-4 space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-zinc-500">
+                Subtotal ({combinedTotalItems} {combinedTotalItems === 1 ? 'item' : 'itens'})
+              </span>
+              <span>{formatPrice(combinedTotalAmount)}</span>
+            </div>
+            {hasPhysicalProducts && (
+              <div className="flex justify-between text-sm">
+                <span className="text-zinc-500">Frete</span>
+                <span className="text-emerald-500">Grátis</span>
+              </div>
+            )}
+            <div className="flex justify-between font-bold text-lg pt-2 border-t border-zinc-200 dark:border-zinc-700">
+              <span>Total</span>
+              <span className="text-indigo-600">{formatPrice(combinedTotalAmount)}</span>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="animate-in fade-in duration-500">
       <SectionHeader title="Checkout" subtitle="Finalize sua compra" />
 
-      {step !== 'success' && renderStepIndicator()}
+      {/* Checkout Content */}
+      <div>
+        {step !== 'success' && step !== 'processing' && renderStepIndicator()}
 
-      {step === 'address' && renderAddressStep()}
-      {step === 'payment' && renderPaymentStep()}
-      {step === 'review' && renderReviewStep()}
-      {step === 'success' && renderSuccessStep()}
+        {step === 'address' && renderAddressStep()}
+        {step === 'payment' && renderPaymentStep()}
+        {(step === 'review' || step === 'processing' || step === 'success') && renderReviewStep()}
+      </div>
+
+      {/* Modal for processing/success/error */}
+      {renderModal()}
     </div>
   );
 };

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Search,
   TrendingUp,
   Zap,
   Briefcase,
@@ -13,10 +12,15 @@ import {
   Heart,
   MapPin,
   CheckCircle,
+  Search,
 } from 'lucide-react';
 import { ProfileType } from '../../../types';
 import { supabase } from '../../../lib/supabase';
 import { EmptyState } from '../../../components/ui/EmptyState';
+import { useFavorites } from '../../../lib/FavoritesContext';
+import { FlashServices } from './FlashServices';
+import { RecommendedServices } from './RecommendedServices';
+import { FeaturedFreelancers } from './FeaturedFreelancers';
 
 interface Product {
   id: string;
@@ -83,14 +87,6 @@ const FEATURED_CATEGORIES = [
     color: 'from-emerald-500 to-teal-600',
     count: '3.2k+',
   },
-];
-
-const TRENDING_SEARCHES = [
-  'Logo Design',
-  'Desenvolvimento Web',
-  'Marketing Digital',
-  'Consultoria SEO',
-  'Copywriting',
 ];
 
 const MOCK_SERVICES = [
@@ -192,54 +188,17 @@ const MOCK_SERVICES = [
   },
 ];
 
-const FEATURED_FREELANCERS = [
-  {
-    id: '1',
-    name: 'Carlos Dev',
-    specialty: 'Desenvolvimento Full Stack',
-    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&q=80',
-    services: 8,
-    clients: 156,
-    rating: 4.9,
-    location: 'São Paulo, SP',
-    verified: true,
-  },
-  {
-    id: '2',
-    name: 'Ana Designer',
-    specialty: 'UI/UX & Branding',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&q=80',
-    services: 12,
-    clients: 234,
-    rating: 4.8,
-    location: 'Rio de Janeiro, RJ',
-    verified: true,
-  },
-  {
-    id: '3',
-    name: 'Roberto CEO',
-    specialty: 'Consultoria Empresarial',
-    avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&q=80',
-    services: 5,
-    clients: 89,
-    rating: 5.0,
-    location: 'Curitiba, PR',
-    verified: true,
-  },
-];
-
 export const WorkMarketplace: React.FC<WorkMarketplaceProps> = ({
   profile,
   userId,
   onNavigate,
 }) => {
   const isBusiness = profile === ProfileType.BUSINESS;
+  const { isFavorited, toggleFavorite } = useFavorites();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
   const [currentBanner, setCurrentBanner] = useState(0);
-  const [favorites, setFavorites] = useState<string[]>([]);
 
   useEffect(() => {
     fetchProducts();
@@ -264,17 +223,23 @@ export const WorkMarketplace: React.FC<WorkMarketplaceProps> = ({
     }
   };
 
-  const toggleFavorite = (id: string) => {
-    setFavorites(prev => (prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]));
+  const handleToggleFavorite = async (serviceId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    try {
+      await toggleFavorite(serviceId, 'service');
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      alert(error instanceof Error ? error.message : 'Faça login para favoritar');
+    }
   };
 
   const workCategories = ['Digital', 'Service', 'Course'];
   const filteredProducts = products.filter(product => {
     const isWorkItem = workCategories.includes(product.category);
     if (!isWorkItem) return false;
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'Todos' || product.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+    return matchesCategory;
   });
 
   // Use mock services if no real products
@@ -282,9 +247,8 @@ export const WorkMarketplace: React.FC<WorkMarketplaceProps> = ({
     filteredProducts.length > 0
       ? filteredProducts
       : MOCK_SERVICES.filter(s => {
-          const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase());
           const matchesCategory = selectedCategory === 'Todos' || s.category === selectedCategory;
-          return matchesSearch && matchesCategory;
+          return matchesCategory;
         });
 
   if (loading) {
@@ -300,32 +264,8 @@ export const WorkMarketplace: React.FC<WorkMarketplaceProps> = ({
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      {/* Header com Search */}
+      {/* Header */}
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="flex-1 w-full max-w-2xl">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={20} />
-            <input
-              type="text"
-              placeholder="Buscar serviços, freelancers..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3.5 rounded-xl border-2 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-base"
-            />
-          </div>
-          <div className="flex items-center gap-2 mt-3 flex-wrap">
-            <span className="text-xs text-zinc-500">Popular:</span>
-            {TRENDING_SEARCHES.map(term => (
-              <button
-                key={term}
-                onClick={() => setSearchTerm(term)}
-                className="text-xs px-2.5 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-              >
-                {term}
-              </button>
-            ))}
-          </div>
-        </div>
         <div className="flex items-center gap-3">
           {isBusiness && (
             <button
@@ -376,6 +316,15 @@ export const WorkMarketplace: React.FC<WorkMarketplaceProps> = ({
         </div>
       </div>
 
+      {/* Flash Services */}
+      <FlashServices onNavigate={onNavigate} />
+
+      {/* Recommended Services */}
+      <RecommendedServices onNavigate={onNavigate} />
+
+      {/* Featured Freelancers */}
+      <FeaturedFreelancers onNavigate={onNavigate} />
+
       {/* Featured Categories */}
       <div>
         <div className="flex items-center justify-between mb-6">
@@ -400,61 +349,6 @@ export const WorkMarketplace: React.FC<WorkMarketplaceProps> = ({
                 <p className="text-white/80 text-sm">{cat.count} disponíveis</p>
               </div>
             </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Featured Freelancers */}
-      <div>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold">Freelancers em Destaque</h2>
-          <button className="text-indigo-600 dark:text-indigo-400 font-medium flex items-center gap-1 hover:gap-2 transition-all">
-            Ver todos <ChevronRight size={18} />
-          </button>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {FEATURED_FREELANCERS.map(freelancer => (
-            <div
-              key={freelancer.id}
-              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 hover:border-indigo-500/50 transition-all hover:shadow-lg cursor-pointer"
-            >
-              <div className="flex items-center gap-4 mb-4">
-                <div className="relative">
-                  <img
-                    src={freelancer.avatar}
-                    alt={freelancer.name}
-                    className="w-16 h-16 rounded-full object-cover"
-                  />
-                  {freelancer.verified && (
-                    <div className="absolute -bottom-1 -right-1 bg-indigo-600 rounded-full p-1">
-                      <CheckCircle size={12} className="text-white" />
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <h3 className="font-bold text-lg flex items-center gap-2">{freelancer.name}</h3>
-                  <p className="text-sm text-zinc-500">{freelancer.specialty}</p>
-                  <p className="text-xs text-zinc-400 flex items-center gap-1 mt-1">
-                    <MapPin size={12} />
-                    {freelancer.location}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-1 text-zinc-500">
-                  <Briefcase size={14} />
-                  <span>{freelancer.services} serviços</span>
-                </div>
-                <div className="flex items-center gap-1 text-zinc-500">
-                  <Users size={14} />
-                  <span>{freelancer.clients} clientes</span>
-                </div>
-                <div className="flex items-center gap-1 text-amber-500">
-                  <Star size={14} fill="currentColor" />
-                  <span className="font-medium">{freelancer.rating}</span>
-                </div>
-              </div>
-            </div>
           ))}
         </div>
       </div>
@@ -516,16 +410,13 @@ export const WorkMarketplace: React.FC<WorkMarketplaceProps> = ({
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <button
-                    onClick={e => {
-                      e.stopPropagation();
-                      toggleFavorite(service.id);
-                    }}
-                    className="absolute top-3 right-3 p-2 bg-white/90 dark:bg-zinc-900/90 rounded-full hover:bg-white dark:hover:bg-zinc-800 transition-colors"
+                    onClick={e => handleToggleFavorite(service.id, e)}
+                    className="absolute top-3 right-3 p-2 bg-white/90 dark:bg-zinc-900/90 rounded-full hover:bg-white dark:hover:bg-zinc-800 transition-colors z-10"
                   >
                     <Heart
                       size={18}
                       className={
-                        favorites.includes(service.id)
+                        isFavorited(service.id, 'service')
                           ? 'text-red-500 fill-red-500'
                           : 'text-zinc-600 dark:text-zinc-400'
                       }

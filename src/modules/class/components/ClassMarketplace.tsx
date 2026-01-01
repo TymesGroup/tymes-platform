@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Search,
   TrendingUp,
   Zap,
   GraduationCap,
@@ -13,10 +12,15 @@ import {
   Users,
   Award,
   Heart,
+  Search,
 } from 'lucide-react';
 import { ProfileType } from '../../../types';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { useCourses } from '../hooks/useClass';
+import { useFavorites } from '../../../lib/FavoritesContext';
+import { FlashCourses } from './FlashCourses';
+import { RecommendedCourses } from './RecommendedCourses';
+import { FeaturedInstructors } from './FeaturedInstructors';
 
 interface ClassMarketplaceProps {
   profile: ProfileType | string;
@@ -64,14 +68,6 @@ const FEATURED_CATEGORIES = [
   { id: 'design', name: 'Design', icon: '🎨', color: 'from-purple-500 to-pink-600', count: '' },
 ];
 
-const TRENDING_SEARCHES = [
-  'React',
-  'Python',
-  'UX Design',
-  'Marketing Digital',
-  'Inteligência Artificial',
-];
-
 export const ClassMarketplace: React.FC<ClassMarketplaceProps> = ({
   profile,
   userId,
@@ -79,10 +75,9 @@ export const ClassMarketplace: React.FC<ClassMarketplaceProps> = ({
 }) => {
   const isBusiness = profile === ProfileType.BUSINESS;
   const { courses, loading } = useCourses();
-  const [searchTerm, setSearchTerm] = useState('');
+  const { isFavorited, toggleFavorite } = useFavorites();
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
   const [currentBanner, setCurrentBanner] = useState(0);
-  const [favorites, setFavorites] = useState<string[]>([]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -91,18 +86,20 @@ export const ClassMarketplace: React.FC<ClassMarketplaceProps> = ({
     return () => clearInterval(interval);
   }, []);
 
-  const toggleFavorite = (courseId: string) => {
-    setFavorites(prev =>
-      prev.includes(courseId) ? prev.filter(id => id !== courseId) : [...prev, courseId]
-    );
+  const handleToggleFavorite = async (courseId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    try {
+      await toggleFavorite(courseId, 'course');
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      alert(error instanceof Error ? error.message : 'Faça login para favoritar');
+    }
   };
 
   const filteredCourses = courses.filter(course => {
-    const matchesSearch =
-      course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      course.instructor.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'Todos' || course.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+    return matchesCategory;
   });
 
   const banner = HERO_BANNERS[currentBanner];
@@ -118,32 +115,8 @@ export const ClassMarketplace: React.FC<ClassMarketplaceProps> = ({
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      {/* Header com Search */}
+      {/* Header */}
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="flex-1 w-full max-w-2xl">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={20} />
-            <input
-              type="text"
-              placeholder="Buscar cursos, instrutores..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3.5 rounded-xl border-2 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all text-base"
-            />
-          </div>
-          <div className="flex items-center gap-2 mt-3 flex-wrap">
-            <span className="text-xs text-zinc-500">Popular:</span>
-            {TRENDING_SEARCHES.map(term => (
-              <button
-                key={term}
-                onClick={() => setSearchTerm(term)}
-                className="text-xs px-2.5 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-purple-100 dark:hover:bg-purple-900/30 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
-              >
-                {term}
-              </button>
-            ))}
-          </div>
-        </div>
         <div className="flex items-center gap-3">
           {isBusiness && (
             <button
@@ -195,6 +168,15 @@ export const ClassMarketplace: React.FC<ClassMarketplaceProps> = ({
           ))}
         </div>
       </div>
+
+      {/* Flash Courses */}
+      <FlashCourses onNavigate={onNavigate} />
+
+      {/* Recommended Courses */}
+      <RecommendedCourses onNavigate={onNavigate} />
+
+      {/* Featured Instructors */}
+      <FeaturedInstructors onNavigate={onNavigate} />
 
       {/* Featured Categories */}
       <div>
@@ -280,22 +262,19 @@ export const ClassMarketplace: React.FC<ClassMarketplaceProps> = ({
                     </div>
                   )}
                   <button
-                    onClick={e => {
-                      e.stopPropagation();
-                      toggleFavorite(course.id);
-                    }}
-                    className="absolute top-3 right-3 p-2 bg-white/90 dark:bg-zinc-900/90 rounded-full hover:bg-white dark:hover:bg-zinc-800 transition-colors"
+                    onClick={e => handleToggleFavorite(course.id, e)}
+                    className="absolute top-3 right-3 p-2 bg-white/90 dark:bg-zinc-900/90 rounded-full hover:bg-white dark:hover:bg-zinc-800 transition-colors z-10"
                   >
                     <Heart
                       size={18}
                       className={
-                        favorites.includes(course.id)
+                        isFavorited(course.id, 'course')
                           ? 'text-red-500 fill-red-500'
                           : 'text-zinc-600 dark:text-zinc-400'
                       }
                     />
                   </button>
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
                     <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center">
                       <Play size={24} className="text-purple-600 ml-1" fill="currentColor" />
                     </div>

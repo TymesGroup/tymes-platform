@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ResponsiveContainer,
   LineChart,
@@ -16,13 +16,18 @@ import { ModuleSettings } from '../../components/shared/ModuleSettings';
 import { WorkMarketplace } from './components/WorkMarketplace';
 import { WorkCreateService } from './components/WorkCreateService';
 import { ServiceDetails } from './components/ServiceDetails';
+import { FreelancerPage } from './components/FreelancerPage';
+import { RecommendedServicesPage } from './components/RecommendedServicesPage';
+import { FeaturedFreelancersPage } from './components/FeaturedFreelancersPage';
+import { FlashServicesPage } from './components/FlashServicesPage';
 import { ProfileType } from '../../types';
 import { useAuth } from '../../lib/AuthContext';
 
 interface WorkModuleProps {
   page: string;
-  profile?: ProfileType; // Optional to avoid breaking if not passed immediately, but we will pass it.
+  profile?: ProfileType;
   onNavigate?: (page: string) => void;
+  itemId?: string; // ID from URL for service/freelancer details
 }
 
 const WorkOverview: React.FC = () => (
@@ -117,10 +122,20 @@ const WorkTasks: React.FC = () => (
   </div>
 );
 
-export const WorkModule: React.FC<WorkModuleProps> = ({ page, profile, onNavigate }) => {
+export const WorkModule: React.FC<WorkModuleProps> = ({ page, profile, onNavigate, itemId }) => {
   const { user } = useAuth();
   const isBusiness = profile === ProfileType.BUSINESS;
-  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
+  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(itemId || null);
+  const [selectedFreelancerId, setSelectedFreelancerId] = useState<string | null>(null);
+
+  // Update selectedServiceId when itemId changes from URL
+  useEffect(() => {
+    if (itemId && (page === 'SERVICE_DETAILS' || page === 'SERVICE')) {
+      setSelectedServiceId(itemId);
+    } else if (itemId && page === 'FREELANCER') {
+      setSelectedFreelancerId(itemId);
+    }
+  }, [itemId, page]);
 
   const handleBackToInicial = () => {
     onNavigate?.('VITRINE');
@@ -136,18 +151,37 @@ export const WorkModule: React.FC<WorkModuleProps> = ({ page, profile, onNavigat
   };
 
   const handleNavigate = (targetPage: string) => {
-    if (targetPage.startsWith('SERVICE_DETAILS:')) {
+    if (targetPage.startsWith('SERVICE_DETAILS:') || targetPage.startsWith('SERVICE:')) {
       const serviceId = targetPage.split(':')[1];
       setSelectedServiceId(serviceId);
-      onNavigate?.('SERVICE_DETAILS');
+      setSelectedFreelancerId(null);
+      // Pass the full page with ID to generate correct URL
+      onNavigate?.(targetPage);
+    } else if (targetPage.startsWith('FREELANCER:')) {
+      const freelancerId = targetPage.split(':')[1];
+      setSelectedFreelancerId(freelancerId);
+      setSelectedServiceId(null);
+      onNavigate?.(targetPage);
     } else {
       setSelectedServiceId(null);
+      setSelectedFreelancerId(null);
       onNavigate?.(targetPage);
     }
   };
 
-  // If on service details page
-  if (page === 'SERVICE_DETAILS' && selectedServiceId) {
+  // If on freelancer page
+  if (page === 'FREELANCER' && selectedFreelancerId) {
+    return (
+      <FreelancerPage
+        freelancerId={selectedFreelancerId}
+        onBack={() => onNavigate?.('VITRINE')}
+        onNavigate={handleNavigate}
+      />
+    );
+  }
+
+  // If on service details page (from URL or internal navigation)
+  if ((page === 'SERVICE_DETAILS' || page === 'SERVICE') && selectedServiceId) {
     return (
       <ServiceDetails
         serviceId={selectedServiceId}
@@ -246,6 +280,15 @@ export const WorkModule: React.FC<WorkModuleProps> = ({ page, profile, onNavigat
           <EmptyState title="Convide membros para seu time" icon={Users} />
         </div>
       );
+    case 'RECOMMENDED_SERVICES':
+      return <RecommendedServicesPage onNavigate={handleNavigate} />;
+
+    case 'FEATURED_FREELANCERS':
+      return <FeaturedFreelancersPage onNavigate={handleNavigate} />;
+
+    case 'FLASH_SERVICES':
+      return <FlashServicesPage onNavigate={handleNavigate} />;
+
     case 'SETTINGS':
       return (
         <ModuleSettings title="Work" moduleId="work" onBack={() => onNavigate?.('OVERVIEW')} />

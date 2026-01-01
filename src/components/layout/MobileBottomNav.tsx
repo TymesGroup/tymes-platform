@@ -52,13 +52,18 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
 }) => {
   const isSuperAdmin = activeProfile === ProfileType.SUPERADMIN;
 
-  const isRootModule = [
-    ModuleType.DASHBOARD,
-    ModuleType.EXPLORE,
-    ModuleType.AI_AGENT,
-    ModuleType.SETTINGS,
-    ModuleType.PROFILE,
-  ].includes(activeModule as ModuleType);
+  // Global pages should be treated as root modules to keep the main menu visible
+  const GLOBAL_PAGES = ['CHECKOUT', 'ORDERS', 'SAVES', 'NOTIFICATIONS', 'BAG'];
+  const isGlobalPage = GLOBAL_PAGES.includes(activeModule as string);
+
+  const isRootModule =
+    [
+      ModuleType.DASHBOARD,
+      ModuleType.EXPLORE,
+      ModuleType.AI_AGENT,
+      ModuleType.SETTINGS,
+      ModuleType.PROFILE,
+    ].includes(activeModule as ModuleType) || isGlobalPage;
 
   const currentModuleMenu = !isRootModule ? MODULE_MENUS[activeModule as string] : null;
   const superAdminMenu = MODULE_MENUS['SUPERADMIN'];

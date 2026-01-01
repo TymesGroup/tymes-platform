@@ -3,7 +3,7 @@ import { supabase } from './supabase';
 import { useAuth } from './AuthContext';
 import { dataCache, CACHE_KEYS } from './dataCache';
 
-export interface CartProduct {
+export interface BagProduct {
   id: string;
   name: string;
   price: number;
@@ -13,35 +13,35 @@ export interface CartProduct {
   store_id: string | null;
 }
 
-export interface CartItem {
+export interface BagItem {
   id: string;
   product_id: string;
   quantity: number;
-  product?: CartProduct;
+  product?: BagProduct;
 }
 
-interface CartState {
-  items: CartItem[];
+interface BagState {
+  items: BagItem[];
   loading: boolean;
   isOpen: boolean;
 }
 
-interface CartContextType extends CartState {
+interface BagContextType extends BagState {
   addItem: (productId: string, quantity?: number) => Promise<void>;
   removeItem: (itemId: string) => Promise<void>;
   updateQuantity: (itemId: string, quantity: number) => Promise<void>;
-  clearCart: () => Promise<void>;
-  openCart: () => void;
-  closeCart: () => void;
-  toggleCart: () => void;
+  clearBag: () => Promise<void>;
+  openBag: () => void;
+  closeBag: () => void;
+  toggleBag: () => void;
   totalItems: number;
   totalAmount: number;
-  refreshCart: () => Promise<void>;
+  refreshBag: () => Promise<void>;
 }
 
-const CartContext = createContext<CartContextType | undefined>(undefined);
+const BagContext = createContext<BagContextType | undefined>(undefined);
 
-function formatCartItems(data: any[]): CartItem[] {
+function formatBagItems(data: any[]): BagItem[] {
   return (data || []).map((item: any) => ({
     id: item.id,
     product_id: item.product_id,
@@ -50,22 +50,22 @@ function formatCartItems(data: any[]): CartItem[] {
   }));
 }
 
-export function CartProvider({ children }: { children: React.ReactNode }) {
+export function BagProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const cacheKey = user?.id ? CACHE_KEYS.CART(user.id) : '';
 
   // Initialize from cache immediately
-  const [state, setState] = useState<CartState>(() => {
+  const [state, setState] = useState<BagState>(() => {
     if (!user?.id) return { items: [], loading: false, isOpen: false };
     const cached = dataCache.get<any[]>(cacheKey);
     return {
-      items: cached ? formatCartItems(cached) : [],
+      items: cached ? formatBagItems(cached) : [],
       loading: !cached,
       isOpen: false,
     };
   });
 
-  const fetchCart = useCallback(
+  const fetchBag = useCallback(
     async (forceRefresh = false) => {
       if (!user?.id) {
         setState(s => ({ ...s, items: [], loading: false }));
@@ -97,29 +97,29 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           { forceRefresh }
         );
 
-        setState(s => ({ ...s, items: formatCartItems(data), loading: false }));
+        setState(s => ({ ...s, items: formatBagItems(data), loading: false }));
       } catch (err) {
-        console.error('Error fetching cart:', err);
+        console.error('Error fetching bag:', err);
         setState(s => ({ ...s, loading: false }));
       }
     },
     [user?.id, cacheKey]
   );
 
-  // Fetch cart on mount and user change
+  // Fetch bag on mount and user change
   useEffect(() => {
-    fetchCart();
+    fetchBag();
 
     if (!user?.id) return;
 
     // Subscribe to cache updates
     const unsubscribe = dataCache.subscribe<any[]>(cacheKey, data => {
-      setState(s => ({ ...s, items: formatCartItems(data) }));
+      setState(s => ({ ...s, items: formatBagItems(data) }));
     });
 
     // Real-time subscription
     const channel = supabase
-      .channel(`cart:${user.id}`)
+      .channel(`bag:${user.id}`)
       .on(
         'postgres_changes',
         {
@@ -129,7 +129,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           filter: `user_id=eq.${user.id}`,
         },
         () => {
-          fetchCart(true);
+          fetchBag(true);
         }
       )
       .subscribe();
@@ -138,11 +138,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       unsubscribe();
       supabase.removeChannel(channel);
     };
-  }, [user?.id, fetchCart, cacheKey]);
+  }, [user?.id, fetchBag, cacheKey]);
 
   const addItem = useCallback(
     async (productId: string, quantity = 1) => {
-      if (!user?.id) throw new Error('Faça login para adicionar ao carrinho');
+      if (!user?.id) throw new Error('Faça login para adicionar à bolsa');
 
       // Check if item already exists
       const existingItem = state.items.find(item => item.product_id === productId);
@@ -183,19 +183,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           // Optimistic update
           setState(s => ({
             ...s,
-            items: [...s.items, formatCartItems([data])[0]],
+            items: [...s.items, formatBagItems([data])[0]],
           }));
         }
 
         // Update cache
-        fetchCart(true);
+        fetchBag(true);
       } catch (err) {
-        console.error('Error adding to cart:', err);
-        fetchCart(true); // Revert on error
+        console.error('Error adding to bag:', err);
+        fetchBag(true); // Revert on error
         throw err;
       }
     },
-    [user?.id, state.items, fetchCart]
+    [user?.id, state.items, fetchBag]
   );
 
   const removeItem = useCallback(
@@ -222,11 +222,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           (current || []).filter((item: any) => item.id !== itemId)
         );
       } catch (err) {
-        console.error('Error removing from cart:', err);
-        fetchCart(true); // Revert on error
+        console.error('Error removing from bag:', err);
+        fetchBag(true); // Revert on error
       }
     },
-    [user?.id, cacheKey, fetchCart]
+    [user?.id, cacheKey, fetchBag]
   );
 
   const updateQuantity = useCallback(
@@ -254,13 +254,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         );
       } catch (err) {
         console.error('Error updating quantity:', err);
-        fetchCart(true); // Revert on error
+        fetchBag(true); // Revert on error
       }
     },
-    [user?.id, cacheKey, fetchCart]
+    [user?.id, cacheKey, fetchBag]
   );
 
-  const clearCart = useCallback(async () => {
+  const clearBag = useCallback(async () => {
     if (!user?.id) return;
 
     // Optimistic update
@@ -272,14 +272,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw error;
     } catch (err) {
-      console.error('Error clearing cart:', err);
-      fetchCart(true); // Revert on error
+      console.error('Error clearing bag:', err);
+      fetchBag(true); // Revert on error
     }
-  }, [user?.id, cacheKey, fetchCart]);
+  }, [user?.id, cacheKey, fetchBag]);
 
-  const openCart = useCallback(() => setState(s => ({ ...s, isOpen: true })), []);
-  const closeCart = useCallback(() => setState(s => ({ ...s, isOpen: false })), []);
-  const toggleCart = useCallback(() => setState(s => ({ ...s, isOpen: !s.isOpen })), []);
+  const openBag = useCallback(() => setState(s => ({ ...s, isOpen: true })), []);
+  const closeBag = useCallback(() => setState(s => ({ ...s, isOpen: false })), []);
+  const toggleBag = useCallback(() => setState(s => ({ ...s, isOpen: !s.isOpen })), []);
 
   const totalItems = state.items.reduce((sum, item) => sum + (item.quantity || 1), 0);
   const totalAmount = state.items.reduce((sum, item) => {
@@ -288,30 +288,36 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, 0);
 
   return (
-    <CartContext.Provider
+    <BagContext.Provider
       value={{
         ...state,
         addItem,
         removeItem,
         updateQuantity,
-        clearCart,
-        openCart,
-        closeCart,
-        toggleCart,
+        clearBag,
+        openBag,
+        closeBag,
+        toggleBag,
         totalItems,
         totalAmount,
-        refreshCart: () => fetchCart(true),
+        refreshBag: () => fetchBag(true),
       }}
     >
       {children}
-    </CartContext.Provider>
+    </BagContext.Provider>
   );
 }
 
-export function useCart() {
-  const context = useContext(CartContext);
+export function useBag() {
+  const context = useContext(BagContext);
   if (!context) {
-    throw new Error('useCart must be used within a CartProvider');
+    throw new Error('useBag must be used within a BagProvider');
   }
   return context;
 }
+
+// Re-export with old names for backward compatibility
+export const CartProvider = BagProvider;
+export const useCart = useBag;
+export type CartItem = BagItem;
+export type CartProduct = BagProduct;

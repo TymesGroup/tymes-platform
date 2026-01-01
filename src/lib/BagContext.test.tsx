@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, act } from '@testing-library/react';
 import React from 'react';
-import { CartProvider, useCart } from './CartContext';
+import { BagProvider, useBag } from './BagContext';
 import { AuthProvider } from './AuthContext';
 
 // Mock Supabase client
@@ -77,25 +77,25 @@ vi.mock('./AuthContext', async () => {
   };
 });
 
-// Test component to access cart context
-function TestComponent({ onCart }: { onCart?: (cart: ReturnType<typeof useCart>) => void }) {
-  const cart = useCart();
+// Test component to access bag context
+function TestComponent({ onBag }: { onBag?: (bag: ReturnType<typeof useBag>) => void }) {
+  const bag = useBag();
   React.useEffect(() => {
-    onCart?.(cart);
-  }, [cart, onCart]);
+    onBag?.(bag);
+  }, [bag, onBag]);
 
   return (
     <div>
-      <span data-testid="loading">{cart.loading ? 'loading' : 'ready'}</span>
-      <span data-testid="total-items">{cart.totalItems}</span>
-      <span data-testid="total-amount">{cart.totalAmount}</span>
-      <span data-testid="is-open">{cart.isOpen ? 'open' : 'closed'}</span>
-      <span data-testid="items-count">{cart.items.length}</span>
+      <span data-testid="loading">{bag.loading ? 'loading' : 'ready'}</span>
+      <span data-testid="total-items">{bag.totalItems}</span>
+      <span data-testid="total-amount">{bag.totalAmount}</span>
+      <span data-testid="is-open">{bag.isOpen ? 'open' : 'closed'}</span>
+      <span data-testid="items-count">{bag.items.length}</span>
     </div>
   );
 }
 
-describe('CartContext Integration', () => {
+describe('BagContext Integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
@@ -108,7 +108,7 @@ describe('CartContext Integration', () => {
   });
 
   describe('Initial State', () => {
-    it('should start with empty cart', async () => {
+    it('should start with empty bag', async () => {
       mockFrom.mockReturnValue({
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockResolvedValue({ data: [], error: null }),
@@ -116,9 +116,9 @@ describe('CartContext Integration', () => {
       });
 
       render(
-        <CartProvider>
+        <BagProvider>
           <TestComponent />
-        </CartProvider>
+        </BagProvider>
       );
 
       await waitFor(() => {
@@ -130,8 +130,8 @@ describe('CartContext Integration', () => {
       expect(screen.getByTestId('is-open')).toHaveTextContent('closed');
     });
 
-    it('should load existing cart items', async () => {
-      const mockCartItems = [
+    it('should load existing bag items', async () => {
+      const mockBagItems = [
         {
           id: 'item-1',
           product_id: 'prod-1',
@@ -150,14 +150,14 @@ describe('CartContext Integration', () => {
 
       mockFrom.mockReturnValue({
         select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockResolvedValue({ data: mockCartItems, error: null }),
+          eq: vi.fn().mockResolvedValue({ data: mockBagItems, error: null }),
         }),
       });
 
       render(
-        <CartProvider>
+        <BagProvider>
           <TestComponent />
-        </CartProvider>
+        </BagProvider>
       );
 
       await waitFor(() => {
@@ -170,7 +170,7 @@ describe('CartContext Integration', () => {
   });
 
   describe('Add Item Flow', () => {
-    it('should add new item to cart', async () => {
+    it('should add new item to bag', async () => {
       const newItem = {
         id: 'new-item-1',
         product_id: 'prod-1',
@@ -186,7 +186,7 @@ describe('CartContext Integration', () => {
         },
       };
 
-      // Initial empty cart
+      // Initial empty bag
       mockFrom.mockReturnValue({
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockResolvedValue({ data: [], error: null }),
@@ -198,16 +198,16 @@ describe('CartContext Integration', () => {
         }),
       });
 
-      let cartContext: ReturnType<typeof useCart> | null = null;
+      let bagContext: ReturnType<typeof useBag> | null = null;
 
       render(
-        <CartProvider>
+        <BagProvider>
           <TestComponent
-            onCart={cart => {
-              cartContext = cart;
+            onBag={bag => {
+              bagContext = bag;
             }}
           />
-        </CartProvider>
+        </BagProvider>
       );
 
       await waitFor(() => {
@@ -215,7 +215,7 @@ describe('CartContext Integration', () => {
       });
 
       await act(async () => {
-        await cartContext!.addItem('prod-1', 1);
+        await bagContext!.addItem('prod-1', 1);
       });
 
       expect(mockFrom).toHaveBeenCalledWith('cart_items');
@@ -246,16 +246,16 @@ describe('CartContext Integration', () => {
         }),
       });
 
-      let cartContext: ReturnType<typeof useCart> | null = null;
+      let bagContext: ReturnType<typeof useBag> | null = null;
 
       render(
-        <CartProvider>
+        <BagProvider>
           <TestComponent
-            onCart={cart => {
-              cartContext = cart;
+            onBag={bag => {
+              bagContext = bag;
             }}
           />
-        </CartProvider>
+        </BagProvider>
       );
 
       await waitFor(() => {
@@ -263,7 +263,7 @@ describe('CartContext Integration', () => {
       });
 
       await act(async () => {
-        await cartContext!.addItem('prod-1', 2);
+        await bagContext!.addItem('prod-1', 2);
       });
 
       // Verify update was called
@@ -272,7 +272,7 @@ describe('CartContext Integration', () => {
   });
 
   describe('Remove Item Flow', () => {
-    it('should remove item from cart', async () => {
+    it('should remove item from bag', async () => {
       const existingItem = {
         id: 'item-1',
         product_id: 'prod-1',
@@ -299,16 +299,16 @@ describe('CartContext Integration', () => {
         }),
       });
 
-      let cartContext: ReturnType<typeof useCart> | null = null;
+      let bagContext: ReturnType<typeof useBag> | null = null;
 
       render(
-        <CartProvider>
+        <BagProvider>
           <TestComponent
-            onCart={cart => {
-              cartContext = cart;
+            onBag={bag => {
+              bagContext = bag;
             }}
           />
-        </CartProvider>
+        </BagProvider>
       );
 
       await waitFor(() => {
@@ -316,7 +316,7 @@ describe('CartContext Integration', () => {
       });
 
       await act(async () => {
-        await cartContext!.removeItem('item-1');
+        await bagContext!.removeItem('item-1');
       });
 
       // Item should be removed optimistically
@@ -354,16 +354,16 @@ describe('CartContext Integration', () => {
         }),
       });
 
-      let cartContext: ReturnType<typeof useCart> | null = null;
+      let bagContext: ReturnType<typeof useBag> | null = null;
 
       render(
-        <CartProvider>
+        <BagProvider>
           <TestComponent
-            onCart={cart => {
-              cartContext = cart;
+            onBag={bag => {
+              bagContext = bag;
             }}
           />
-        </CartProvider>
+        </BagProvider>
       );
 
       await waitFor(() => {
@@ -371,7 +371,7 @@ describe('CartContext Integration', () => {
       });
 
       await act(async () => {
-        await cartContext!.updateQuantity('item-1', 5);
+        await bagContext!.updateQuantity('item-1', 5);
       });
 
       // Quantity should be updated optimistically
@@ -381,8 +381,8 @@ describe('CartContext Integration', () => {
     });
   });
 
-  describe('Clear Cart Flow', () => {
-    it('should clear all items from cart', async () => {
+  describe('Clear Bag Flow', () => {
+    it('should clear all items from bag', async () => {
       const existingItems = [
         {
           id: 'item-1',
@@ -423,16 +423,16 @@ describe('CartContext Integration', () => {
         }),
       });
 
-      let cartContext: ReturnType<typeof useCart> | null = null;
+      let bagContext: ReturnType<typeof useBag> | null = null;
 
       render(
-        <CartProvider>
+        <BagProvider>
           <TestComponent
-            onCart={cart => {
-              cartContext = cart;
+            onBag={bag => {
+              bagContext = bag;
             }}
           />
-        </CartProvider>
+        </BagProvider>
       );
 
       await waitFor(() => {
@@ -440,7 +440,7 @@ describe('CartContext Integration', () => {
       });
 
       await act(async () => {
-        await cartContext!.clearCart();
+        await bagContext!.clearBag();
       });
 
       await waitFor(() => {
@@ -451,24 +451,24 @@ describe('CartContext Integration', () => {
     });
   });
 
-  describe('Cart UI State', () => {
-    it('should toggle cart open/close state', async () => {
+  describe('Bag UI State', () => {
+    it('should toggle bag open/close state', async () => {
       mockFrom.mockReturnValue({
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockResolvedValue({ data: [], error: null }),
         }),
       });
 
-      let cartContext: ReturnType<typeof useCart> | null = null;
+      let bagContext: ReturnType<typeof useBag> | null = null;
 
       render(
-        <CartProvider>
+        <BagProvider>
           <TestComponent
-            onCart={cart => {
-              cartContext = cart;
+            onBag={bag => {
+              bagContext = bag;
             }}
           />
-        </CartProvider>
+        </BagProvider>
       );
 
       await waitFor(() => {
@@ -478,19 +478,19 @@ describe('CartContext Integration', () => {
       expect(screen.getByTestId('is-open')).toHaveTextContent('closed');
 
       act(() => {
-        cartContext!.openCart();
+        bagContext!.openBag();
       });
 
       expect(screen.getByTestId('is-open')).toHaveTextContent('open');
 
       act(() => {
-        cartContext!.closeCart();
+        bagContext!.closeBag();
       });
 
       expect(screen.getByTestId('is-open')).toHaveTextContent('closed');
 
       act(() => {
-        cartContext!.toggleCart();
+        bagContext!.toggleBag();
       });
 
       expect(screen.getByTestId('is-open')).toHaveTextContent('open');
@@ -499,7 +499,7 @@ describe('CartContext Integration', () => {
 
   describe('Total Calculations', () => {
     it('should calculate totals correctly', async () => {
-      const cartItems = [
+      const bagItems = [
         {
           id: 'item-1',
           product_id: 'prod-1',
@@ -532,14 +532,14 @@ describe('CartContext Integration', () => {
 
       mockFrom.mockReturnValue({
         select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockResolvedValue({ data: cartItems, error: null }),
+          eq: vi.fn().mockResolvedValue({ data: bagItems, error: null }),
         }),
       });
 
       render(
-        <CartProvider>
+        <BagProvider>
           <TestComponent />
-        </CartProvider>
+        </BagProvider>
       );
 
       await waitFor(() => {

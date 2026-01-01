@@ -4,9 +4,6 @@ import {
   Settings,
   Bot,
   ShoppingBag,
-  ShoppingCart,
-  ListOrdered,
-  Heart,
   Tag,
   GraduationCap,
   Library,
@@ -23,8 +20,6 @@ import {
   Target,
   BookOpen,
   FileText,
-  Bell,
-  Shield,
   CreditCard,
   TrendingUp,
   Database,
@@ -71,9 +66,6 @@ export const MODULE_MENUS: Record<string, { title: string; items: SubMenuItem[] 
     title: 'Shop',
     items: [
       { id: 'VITRINE', label: 'Inicial', icon: ShoppingBag },
-      { id: 'CART', label: 'Carrinho', icon: ShoppingCart },
-      { id: 'ORDERS', label: 'Pedidos', icon: ListOrdered },
-      { id: 'FAVORITES', label: 'Favoritos', icon: Heart },
       {
         id: 'INVENTORY',
         label: 'Meus Produtos',
@@ -131,7 +123,6 @@ export const MODULE_MENUS: Record<string, { title: string; items: SubMenuItem[] 
       { id: 'PROFILE', label: 'Meu Perfil', icon: Users },
       { id: 'CONNECTIONS', label: 'Conexões', icon: Users },
       { id: 'MESSAGES', label: 'Mensagens', icon: MessageSquare },
-      { id: 'NOTIFICATIONS', label: 'Notificações', icon: Bell },
       {
         id: 'CAMPAIGNS',
         label: 'Campanhas',

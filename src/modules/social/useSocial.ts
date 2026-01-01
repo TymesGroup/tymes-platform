@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
-import { useAuth } from '../../lib/useAuth';
+import { useAuth } from '../../lib/AuthContext';
 import { dataCache, CACHE_KEYS } from '../../lib/dataCache';
 import type { Database } from '../../lib/database.types';
 

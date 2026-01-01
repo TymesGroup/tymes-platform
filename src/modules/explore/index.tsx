@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   ShoppingBag,
   GraduationCap,
   Briefcase,
   Users,
   ArrowRight,
-  Search,
   Lock,
   Package,
 } from 'lucide-react';
@@ -35,7 +34,6 @@ export const ExploreView: React.FC<{
   profile: ProfileType;
   onOpenModule: (module: string) => void;
 }> = ({ profile, onOpenModule }) => {
-  const [searchQuery, setSearchQuery] = useState('');
   const { activeModules, userEnabledModules, canAccessModule, loading } = usePlatform();
   const { profile: userProfile } = useAuth();
 
@@ -59,14 +57,7 @@ export const ExploreView: React.FC<{
     };
   });
 
-  const filteredModules = modules.filter(m => {
-    const query = searchQuery.toLowerCase();
-    return (
-      m.label.toLowerCase().includes(query) ||
-      m.desc.toLowerCase().includes(query) ||
-      m.tags?.some(tag => tag.toLowerCase().includes(query))
-    );
-  });
+  const filteredModules = modules;
 
   const handleModuleClick = (mod: (typeof modules)[0]) => {
     if (!mod.isEnabled) {
@@ -77,7 +68,7 @@ export const ExploreView: React.FC<{
     // Sempre abrir na página inicial do módulo (VITRINE para SHOP/CLASS/WORK, FEED para SOCIAL)
     const initialPage = mod.id === 'SOCIAL' ? 'feed' : 'vitrine';
     const accountType = userProfile?.type === ProfileType.BUSINESS ? 'business' : 'personal';
-    window.location.hash = `/${accountType}/${mod.slug}/${initialPage}`;
+    window.location.href = `/${accountType}/${mod.slug}/${initialPage}`;
   };
 
   if (loading) {
@@ -94,20 +85,6 @@ export const ExploreView: React.FC<{
         title="Explorar Módulos"
         subtitle="Encontre todas as ferramentas e recursos que você precisa."
       />
-
-      {/* Intelligent Search Bar */}
-      <div className="relative mb-8 max-w-2xl">
-        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-          <Search className="h-5 w-5 text-zinc-400" />
-        </div>
-        <input
-          type="text"
-          className="block w-full pl-11 pr-4 py-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl leading-5 placeholder-zinc-400 focus:outline-none focus:bg-white dark:focus:bg-zinc-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 sm:text-sm shadow-sm hover:shadow-md"
-          placeholder="O que você está procurando hoje? (ex: projetos, cursos, marketplace...)"
-          value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
-        />
-      </div>
 
       {/* Info about enabled modules */}
       {userEnabledModules.length === 0 && (

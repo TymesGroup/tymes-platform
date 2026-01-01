@@ -15,11 +15,11 @@ interface AuthGuardProps {
 }
 
 export const AuthGuard: React.FC<AuthGuardProps> = ({ children, fallback }) => {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, initialized } = useAuth();
   const location = useLocation();
 
   // Show loading while checking authentication
-  if (loading) {
+  if (loading || !initialized) {
     return fallback ? (
       <>{fallback}</>
     ) : (
@@ -52,10 +52,11 @@ interface GuestGuardProps {
 }
 
 export const GuestGuard: React.FC<GuestGuardProps> = ({ children }) => {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, initialized } = useAuth();
   const location = useLocation();
 
-  if (loading) {
+  // Show loading while checking authentication
+  if (loading || !initialized) {
     return (
       <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center">
         <div className="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-xl animate-pulse">
@@ -69,8 +70,17 @@ export const GuestGuard: React.FC<GuestGuardProps> = ({ children }) => {
   if (user && profile) {
     const state = location.state as { returnTo?: string } | null;
     const returnTo = state?.returnTo;
-    const accountType = profile.type === 'SUPERADMIN' ? 'admin' : profile.type.toLowerCase();
+
+    // Determine account type from profile
+    let accountType = 'personal';
+    if (profile.type === 'SUPERADMIN') {
+      accountType = 'admin';
+    } else if (profile.type === 'BUSINESS') {
+      accountType = 'business';
+    }
+
     const defaultPath = `/${accountType}/dashboard`;
+    console.log('🔄 GuestGuard redirecting to:', returnTo || defaultPath);
 
     return <Navigate to={returnTo || defaultPath} replace />;
   }

@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { userPreferences, analyticsStorage, csrfToken } from './supabase';
 
 /**
- * Hook para gerenciar preferências do usuário com persistência em cookies
+ * Hook para gerenciar preferências do usuário com persistência
  */
 export function useUserPreferences() {
   const [preferences, setPreferences] = useState<Record<string, unknown>>(() =>
@@ -130,33 +130,23 @@ export function useSessionActivity() {
 }
 
 /**
- * Hook para persistir estado em cookies/localStorage
+ * Hook para persistir estado em localStorage/sessionStorage
+ * Simplificado - não usa mais cookies para dados de estado
  */
 export function usePersistedState<T>(
   key: string,
   defaultValue: T,
   options: {
-    storage?: 'local' | 'session' | 'cookie';
-    maxAge?: number; // em segundos, apenas para cookies
+    storage?: 'local' | 'session';
   } = {}
 ): [T, (value: T | ((prev: T) => T)) => void] {
-  const { storage = 'local', maxAge = 30 * 24 * 60 * 60 } = options;
+  const { storage = 'local' } = options;
 
   const [state, setState] = useState<T>(() => {
     try {
-      if (storage === 'cookie') {
-        const cookies = document.cookie.split(';');
-        for (const cookie of cookies) {
-          const [cookieKey, cookieValue] = cookie.trim().split('=');
-          if (cookieKey === key) {
-            return JSON.parse(decodeURIComponent(cookieValue));
-          }
-        }
-      } else {
-        const storageObj = storage === 'session' ? sessionStorage : localStorage;
-        const stored = storageObj.getItem(key);
-        if (stored) return JSON.parse(stored);
-      }
+      const storageObj = storage === 'session' ? sessionStorage : localStorage;
+      const stored = storageObj.getItem(key);
+      if (stored) return JSON.parse(stored);
     } catch {
       // Ignora erros de parsing
     }
@@ -170,14 +160,8 @@ export function usePersistedState<T>(
 
         try {
           const serialized = JSON.stringify(newValue);
-
-          if (storage === 'cookie') {
-            const secure = window.location.protocol === 'https:' ? 'Secure;' : '';
-            document.cookie = `${key}=${encodeURIComponent(serialized)}; path=/; max-age=${maxAge}; ${secure} SameSite=Lax;`;
-          } else {
-            const storageObj = storage === 'session' ? sessionStorage : localStorage;
-            storageObj.setItem(key, serialized);
-          }
+          const storageObj = storage === 'session' ? sessionStorage : localStorage;
+          storageObj.setItem(key, serialized);
         } catch (e) {
           console.warn(`Failed to persist state for key "${key}":`, e);
         }
@@ -185,8 +169,26 @@ export function usePersistedState<T>(
         return newValue;
       });
     },
-    [key, storage, maxAge]
+    [key, storage]
   );
+
+  // Sync with storage changes from other tabs
+  useEffect(() => {
+    if (storage !== 'local') return;
+
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === key && event.newValue !== null) {
+        try {
+          setState(JSON.parse(event.newValue));
+        } catch {
+          // Ignore parse errors
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [key, storage]);
 
   return [state, setValue];
 }

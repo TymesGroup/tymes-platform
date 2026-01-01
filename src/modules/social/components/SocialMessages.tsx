@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useMessages, ConversationWithDetails, MessageWithSender } from '../useMessages';
 import { useConnections, ProfileRow } from '../useConnections';
-import { useAuth } from '../../../lib/useAuth';
+import { useAuth } from '../../../lib/AuthContext';
 import { SectionHeader } from '../../../components/ui/SectionHeader';
 import {
   MessageSquare,

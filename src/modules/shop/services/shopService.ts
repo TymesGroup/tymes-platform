@@ -297,7 +297,7 @@ export const orderService = {
 
   async createFromCart(userId: string, shippingAddress: object, paymentMethod: string) {
     const cartItems = await cartService.getItems(userId);
-    if (cartItems.length === 0) throw new Error('Carrinho vazio');
+    if (cartItems.length === 0) throw new Error('Bolsa vazia');
 
     const totalAmount = cartItems.reduce(
       (sum, item) => sum + item.product.price * (item.quantity || 1),

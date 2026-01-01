@@ -2,10 +2,10 @@
  * useSessionActivity Hook
  *
  * Tracks user activity and manages session refresh
- * Updates last activity timestamp on user interactions
+ * Uses localStorage only (no cookies) for consistency
  */
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { supabase, analyticsStorage } from '../supabase';
 
@@ -17,29 +17,34 @@ const LAST_ACTIVITY_KEY = 'tymes_last_activity';
  * Update last activity timestamp
  */
 export function updateLastActivity(): void {
-  const now = Date.now();
-  localStorage.setItem(LAST_ACTIVITY_KEY, now.toString());
-
-  // Also save in cookie for cross-tab persistence
-  const maxAge = 30 * 24 * 60 * 60; // 30 days
-  const secure = window.location.protocol === 'https:' ? 'Secure;' : '';
-  document.cookie = `${LAST_ACTIVITY_KEY}=${now}; path=/; max-age=${maxAge}; ${secure} SameSite=Lax;`;
+  try {
+    localStorage.setItem(LAST_ACTIVITY_KEY, Date.now().toString());
+  } catch {
+    // Ignore storage errors
+  }
 }
 
 /**
  * Get last activity timestamp
  */
 export function getLastActivity(): number {
-  const stored = localStorage.getItem(LAST_ACTIVITY_KEY);
-  return stored ? parseInt(stored, 10) : Date.now();
+  try {
+    const stored = localStorage.getItem(LAST_ACTIVITY_KEY);
+    return stored ? parseInt(stored, 10) : Date.now();
+  } catch {
+    return Date.now();
+  }
 }
 
 /**
  * Clear activity data
  */
 export function clearActivityData(): void {
-  localStorage.removeItem(LAST_ACTIVITY_KEY);
-  document.cookie = `${LAST_ACTIVITY_KEY}=; path=/; max-age=0;`;
+  try {
+    localStorage.removeItem(LAST_ACTIVITY_KEY);
+  } catch {
+    // Ignore storage errors
+  }
 }
 
 /**

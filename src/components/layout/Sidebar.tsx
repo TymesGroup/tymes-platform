@@ -3,7 +3,7 @@
  * Navegação lateral flutuante com margens uniformes e sombra suave
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   LogOut,
   Moon,
@@ -16,8 +16,6 @@ import {
   Lock,
   Loader2,
   Trash2,
-  PanelLeftClose,
-  PanelLeft,
   UserCog,
   Shield,
 } from 'lucide-react';
@@ -34,6 +32,7 @@ interface SidebarProps {
   theme: string;
   toggleTheme: () => void;
   onLogout: () => void;
+  onCollapsedChange?: (collapsed: boolean) => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -45,6 +44,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   theme,
   toggleTheme,
   onLogout,
+  onCollapsedChange,
 }) => {
   const {
     profile,
@@ -61,19 +61,52 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const sidebarRef = useRef<HTMLDivElement>(null);
+
+  // Click outside to collapse
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (sidebarRef.current && !sidebarRef.current.contains(event.target as Node)) {
+        if (!collapsed) {
+          handleCollapse(true);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [collapsed]);
+
+  // Click inside sidebar to expand
+  const handleSidebarClick = () => {
+    if (collapsed) {
+      handleCollapse(false);
+    }
+  };
+
+  // Notify parent when collapsed state changes
+  const handleCollapse = (value: boolean) => {
+    setCollapsed(value);
+    onCollapsedChange?.(value);
+  };
 
   const isSuperAdmin = activeProfile === ProfileType.SUPERADMIN;
   const superAdminMenu = MODULE_MENUS['SUPERADMIN'];
 
+  // Global pages that should keep the root menu visible
+  const GLOBAL_PAGES = ['CHECKOUT', 'ORDERS', 'SAVES', 'NOTIFICATIONS', 'BAG'];
+  const isGlobalPage = GLOBAL_PAGES.includes(activeModule as string);
+
   const isRootModule =
     !isSuperAdmin &&
-    [
+    ([
       ModuleType.DASHBOARD,
       ModuleType.EXPLORE,
       ModuleType.AI_AGENT,
       ModuleType.SETTINGS,
       ModuleType.PROFILE,
-    ].includes(activeModule as ModuleType);
+    ].includes(activeModule as ModuleType) ||
+      isGlobalPage);
 
   const navItemsToRender = isRootModule
     ? ROOT_NAV_ITEMS.filter(item => item.allowedProfiles.includes(activeProfile))
@@ -128,49 +161,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
-      {/* Floating Sidebar Container */}
-      <div className="hidden md:block p-3 h-screen">
+      {/* Floating Sidebar Container - Centered vertically */}
+      <div
+        ref={sidebarRef}
+        className="hidden md:flex flex-col justify-center items-start px-6 h-screen"
+      >
+        {/* Menu Panel - Click to expand when collapsed */}
         <aside
-          className={`h-full flex flex-col ${collapsed ? 'w-[72px]' : 'w-[252px]'} bg-white/80 dark:bg-[#1d1d1f]/80 backdrop-blur-xl backdrop-saturate-150 rounded-2xl shadow-lg shadow-black/5 dark:shadow-black/20 border border-[#d2d2d7]/50 dark:border-[#424245]/50 transition-all duration-300`}
+          onClick={handleSidebarClick}
+          className={`flex flex-col ${collapsed ? 'w-[72px]' : 'w-[252px]'} bg-white/80 dark:bg-[#1d1d1f]/80 backdrop-blur-xl backdrop-saturate-150 rounded-2xl shadow-lg shadow-black/5 dark:shadow-black/20 border border-[#d2d2d7]/50 dark:border-[#424245]/50 transition-all duration-300 overflow-hidden ${collapsed ? 'cursor-pointer' : ''}`}
         >
-          {/* Logo */}
-          <div
-            className={`h-14 flex items-center ${collapsed ? 'justify-center px-3' : 'justify-between px-4'}`}
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0 shadow-md">
-                T
-              </div>
-              {!collapsed && (
-                <span className="text-[17px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
-                  Tymes
-                </span>
-              )}
-            </div>
-            {!collapsed && (
-              <button
-                onClick={() => setCollapsed(true)}
-                className="p-2 rounded-xl text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7] hover:bg-[#f5f5f7] dark:hover:bg-[#2d2d2d] transition-colors"
-              >
-                <PanelLeftClose size={18} />
-              </button>
-            )}
-          </div>
-
-          {/* Expand Button */}
-          {collapsed && (
-            <div className="px-3 py-2">
-              <button
-                onClick={() => setCollapsed(false)}
-                className="w-full p-2.5 rounded-xl text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7] hover:bg-[#f5f5f7] dark:hover:bg-[#2d2d2d] transition-colors flex justify-center"
-              >
-                <PanelLeft size={18} />
-              </button>
-            </div>
-          )}
-
           {/* Account Switcher */}
-          <div className={`${collapsed ? 'px-3 py-2' : 'px-4 py-3'} relative`}>
+          <div className={`${collapsed ? 'px-3 py-3' : 'px-4 py-4'} relative`}>
             <button
               onClick={() => !collapsed && setShowAccountSwitcher(!showAccountSwitcher)}
               className={`w-full ${collapsed ? 'p-2.5 justify-center' : 'p-3'} rounded-xl bg-[#f5f5f7] dark:bg-[#2d2d2d] hover:bg-[#e8e8ed] dark:hover:bg-[#3d3d3d] transition-colors flex items-center gap-3`}
@@ -309,7 +311,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
 
           {/* Navigation */}
-          <nav className={`flex-1 ${collapsed ? 'px-3' : 'px-4'} space-y-1 overflow-y-auto`}>
+          <nav className={`${collapsed ? 'px-3' : 'px-4'} space-y-1 py-2`}>
             {/* SuperAdmin Navigation */}
             {isSuperAdmin &&
               superAdminMenu?.items.map(item => (

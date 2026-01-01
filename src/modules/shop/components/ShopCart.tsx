@@ -1,8 +1,9 @@
 import React from 'react';
-import { ShoppingCart, Trash2, Plus, Minus, ArrowRight, Package, CreditCard } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ShoppingBag, Trash2, Plus, Minus, ArrowRight, Package, CreditCard } from 'lucide-react';
 import { SectionHeader } from '../../../components/ui/SectionHeader';
 import { EmptyState } from '../../../components/ui/EmptyState';
-import { useCart } from '../../../lib/CartContext';
+import { useBag } from '../../../lib/BagContext';
 import { useAuth } from '../../../lib/AuthContext';
 import { ProfileType } from '../../../types';
 
@@ -11,8 +12,9 @@ interface ShopCartProps {
 }
 
 export const ShopCart: React.FC<ShopCartProps> = ({ onNavigate }) => {
-  const { items, loading, totalAmount, updateQuantity, removeItem, clearCart } = useCart();
+  const { items, loading, totalAmount, updateQuantity, removeItem, clearBag } = useBag();
   const { profile } = useAuth();
+  const navigate = useNavigate();
 
   const handleQuantityChange = async (itemId: string, newQuantity: number) => {
     try {
@@ -34,7 +36,7 @@ export const ShopCart: React.FC<ShopCartProps> = ({ onNavigate }) => {
     if (items.length > 0) {
       // Navegar para a página de checkout
       const accountType = profile?.type === ProfileType.BUSINESS ? 'business' : 'personal';
-      window.location.hash = `/${accountType}/checkout`;
+      navigate(`/${accountType}/checkout`);
     }
   };
 
@@ -49,8 +51,8 @@ export const ShopCart: React.FC<ShopCartProps> = ({ onNavigate }) => {
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <SectionHeader
-        title="Carrinho de Compras"
-        subtitle={`${items.length} ${items.length === 1 ? 'item' : 'itens'} no carrinho`}
+        title="Bolsa de Compras"
+        subtitle={`${items.length} ${items.length === 1 ? 'item' : 'itens'} na bolsa`}
       />
 
       {items.length > 0 ? (
@@ -111,10 +113,10 @@ export const ShopCart: React.FC<ShopCartProps> = ({ onNavigate }) => {
             ))}
 
             <button
-              onClick={clearCart}
+              onClick={clearBag}
               className="text-sm text-zinc-500 hover:text-rose-500 transition-colors"
             >
-              Limpar carrinho
+              Limpar bolsa
             </button>
           </div>
 
@@ -156,9 +158,9 @@ export const ShopCart: React.FC<ShopCartProps> = ({ onNavigate }) => {
       ) : (
         <div className="flex flex-col items-center justify-center py-16 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800">
           <EmptyState
-            title="Seu carrinho está vazio"
-            description="Explore o marketplace e adicione produtos ao seu carrinho."
-            icon={ShoppingCart}
+            title="Sua bolsa está vazia"
+            description="Explore o marketplace e adicione produtos à sua bolsa."
+            icon={ShoppingBag}
           />
           <button
             onClick={() => onNavigate?.('VITRINE')}

@@ -1,12 +1,12 @@
 /**
  * GlobalHeader Component - Apple-inspired Design
- * Header com carrinho, favoritos e pedidos no estilo Apple
+ * Header com bolsa, salvos e pedidos no estilo Apple
  */
 
 import React, { useState } from 'react';
 import {
-  ShoppingCart,
-  Heart,
+  ShoppingBag,
+  Bookmark,
   Package,
   X,
   Minus,
@@ -15,7 +15,7 @@ import {
   ArrowLeft,
   CreditCard,
 } from 'lucide-react';
-import { useCart } from '../../lib/CartContext';
+import { useBag } from '../../lib/BagContext';
 import { useFavorites } from '../../lib/FavoritesContext';
 import { useAuth } from '../../lib/AuthContext';
 
@@ -31,7 +31,7 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
   onNavigateToFavorites,
 }) => {
   const { user } = useAuth();
-  const { items, totalItems, totalAmount, removeItem, updateQuantity, clearCart } = useCart();
+  const { items, totalItems, totalAmount, removeItem, updateQuantity, clearBag } = useBag();
   const { favorites } = useFavorites();
   const [showCartPanel, setShowCartPanel] = useState(false);
 
@@ -48,7 +48,7 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
           onClick={onNavigateToFavorites}
           className="relative p-2.5 rounded-xl hover:bg-white dark:hover:bg-[#2d2d2d] transition-colors"
         >
-          <Heart size={18} className="text-[#1d1d1f] dark:text-[#f5f5f7]" />
+          <Bookmark size={18} className="text-[#1d1d1f] dark:text-[#f5f5f7]" />
           {favorites.length > 0 && (
             <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] font-medium rounded-full flex items-center justify-center">
               {favorites.length > 99 ? '99' : favorites.length}
@@ -65,7 +65,7 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
           onClick={() => setShowCartPanel(true)}
           className="relative p-2.5 rounded-xl hover:bg-white dark:hover:bg-[#2d2d2d] transition-colors"
         >
-          <ShoppingCart size={18} className="text-[#1d1d1f] dark:text-[#f5f5f7]" />
+          <ShoppingBag size={18} className="text-[#1d1d1f] dark:text-[#f5f5f7]" />
           {totalItems > 0 && (
             <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-[#0066cc] text-white text-[10px] font-medium rounded-full flex items-center justify-center">
               {totalItems > 99 ? '99' : totalItems}
@@ -84,11 +84,11 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
             <div className="flex items-center justify-between p-5 border-b border-[#d2d2d7] dark:border-[#424245]">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-[#f5f5f7] dark:bg-[#2d2d2d] flex items-center justify-center">
-                  <ShoppingCart size={20} className="text-[#1d1d1f] dark:text-[#f5f5f7]" />
+                  <ShoppingBag size={20} className="text-[#1d1d1f] dark:text-[#f5f5f7]" />
                 </div>
                 <div>
                   <h2 className="text-[17px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
-                    Carrinho
+                    Bolsa
                   </h2>
                   <p className="text-[12px] text-[#86868b]">
                     {totalItems} {totalItems === 1 ? 'item' : 'itens'}
@@ -107,10 +107,10 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
               {items.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full p-6 text-center">
                   <div className="w-16 h-16 rounded-2xl bg-[#f5f5f7] dark:bg-[#2d2d2d] flex items-center justify-center mb-4">
-                    <ShoppingCart size={28} className="text-[#86868b]" />
+                    <ShoppingBag size={28} className="text-[#86868b]" />
                   </div>
                   <h3 className="text-[17px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] mb-1">
-                    Carrinho vazio
+                    Bolsa vazia
                   </h3>
                   <p className="text-[14px] text-[#86868b] mb-6">Adicione produtos para começar</p>
                   <button
@@ -178,10 +178,10 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
                     </div>
                   ))}
                   <button
-                    onClick={clearCart}
+                    onClick={clearBag}
                     className="w-full text-[13px] text-[#86868b] hover:text-red-500 py-2 transition-colors"
                   >
-                    Limpar carrinho
+                    Limpar bolsa
                   </button>
                 </div>
               )}

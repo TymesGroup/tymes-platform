@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../../lib/useAuth';
+import { useAuth } from '../../../lib/AuthContext';
 import { supabase } from '../../../lib/supabase';
 import {
   ArrowLeft,

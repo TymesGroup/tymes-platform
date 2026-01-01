@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useConnections, ProfileRow } from '../useConnections';
-import { useAuth } from '../../../lib/useAuth';
+import { useAuth } from '../../../lib/AuthContext';
 import { SectionHeader } from '../../../components/ui/SectionHeader';
 import { supabase } from '../../../lib/supabase';
 import {

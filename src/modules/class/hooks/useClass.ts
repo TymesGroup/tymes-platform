@@ -19,6 +19,19 @@ export interface Course {
   total_reviews?: number;
   students_count?: number;
   is_bestseller?: boolean;
+  status?: string;
+  level?: string;
+  language?: string;
+  video_url?: string;
+}
+
+export interface CourseMedia {
+  id: string;
+  url: string;
+  type: 'image' | 'video';
+  position: number;
+  is_primary: boolean;
+  alt_text?: string;
 }
 
 export interface CourseWithInstructor extends Course {
@@ -27,6 +40,7 @@ export interface CourseWithInstructor extends Course {
     name: string;
     avatar_url: string | null;
   };
+  media?: CourseMedia[];
 }
 
 // Hook para cursos - com cache instantâneo
@@ -112,26 +126,32 @@ export function useCourse(courseId: string | null) {
       return;
     }
 
-    // Check cache first
-    const courses = dataCache.get<Course[]>(CACHE_KEYS.COURSES);
-    const cached = courses?.find(c => c.id === courseId);
-    if (cached) {
-      setCourse(cached as CourseWithInstructor);
-      setLoading(false);
-      return;
-    }
-
     const fetch = async () => {
       try {
+        // Fetch course with instructor
         const { data, error } = await supabase
           .from('courses')
-          .select('*')
+          .select('*, instructor_profile:profiles!courses_created_by_fkey(id, name, avatar_url)')
           .eq('id', courseId)
           .single();
         if (error) throw error;
-        setCourse(data);
+
+        // Fetch media
+        const { data: mediaData } = await supabase
+          .from('course_media')
+          .select('*')
+          .eq('course_id', courseId)
+          .order('position');
+
+        setCourse({ ...data, media: mediaData || [] });
       } catch (err) {
         console.error('Erro ao carregar curso:', err);
+        // Fallback to cache
+        const courses = dataCache.get<Course[]>(CACHE_KEYS.COURSES);
+        const cached = courses?.find(c => c.id === courseId);
+        if (cached) {
+          setCourse(cached as CourseWithInstructor);
+        }
       } finally {
         setLoading(false);
       }
